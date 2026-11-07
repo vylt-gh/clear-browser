@@ -74,6 +74,16 @@ data class ReadingUiState(
     val topBarColor: Int? = null,
     /** Whether the webpage top background is light, for status bar icon contrast. */
     val isTopBarLight: Boolean = true,
+    /** Whether an HTML5 element or video is currently in fullscreen mode. */
+    val isFullscreen: Boolean = false,
+    /** Whether the Find in Page bar is visible. */
+    val findInPageVisible: Boolean = false,
+    /** The active search query for Find in Page. */
+    val findQuery: String = "",
+    /** Active match index (1-based, or 0 if none). */
+    val findActiveMatch: Int = 0,
+    /** Total number of matches found on the page. */
+    val findTotalMatches: Int = 0,
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -760,6 +770,54 @@ class ReadingViewModel(
         )
     }
 
+    fun exitFullScreen() {
+        engineForActive()?.exitFullScreen()
+        _state.value = _state.value.copy(isFullscreen = false)
+    }
+
+    fun openFindInPage() {
+        _state.value = _state.value.copy(
+            findInPageVisible = true,
+            findQuery = "",
+            findActiveMatch = 0,
+            findTotalMatches = 0,
+        )
+    }
+
+    fun setFindQuery(query: String) {
+        _state.value = _state.value.copy(findQuery = query)
+        if (query.isBlank()) {
+            engineForActive()?.clearFindInPage()
+            _state.value = _state.value.copy(findActiveMatch = 0, findTotalMatches = 0)
+        } else {
+            engineForActive()?.findInPage(query, forward = true)
+        }
+    }
+
+    fun findNext() {
+        val query = _state.value.findQuery
+        if (query.isNotBlank()) {
+            engineForActive()?.findInPage(query, forward = true)
+        }
+    }
+
+    fun findPrevious() {
+        val query = _state.value.findQuery
+        if (query.isNotBlank()) {
+            engineForActive()?.findInPage(query, forward = false)
+        }
+    }
+
+    fun closeFindInPage() {
+        engineForActive()?.clearFindInPage()
+        _state.value = _state.value.copy(
+            findInPageVisible = false,
+            findQuery = "",
+            findActiveMatch = 0,
+            findTotalMatches = 0,
+        )
+    }
+
     fun onOmniboxQueryChanged(query: String) {
         suggestionsJob?.cancel()
         val trimmed = query.trim()
@@ -1055,6 +1113,19 @@ class ReadingViewModel(
             if (!isActive) return
             _state.value = _state.value.copy(topBarColor = color, isTopBarLight = isLight)
         }
+
+        override fun onFullScreenChanged(fullScreen: Boolean) {
+            if (!isActive) return
+            _state.value = _state.value.copy(isFullscreen = fullScreen)
+        }
+
+        override fun onFindResult(activeMatch: Int, totalMatches: Int) {
+            if (!isActive) return
+            _state.value = _state.value.copy(
+                findActiveMatch = activeMatch,
+                findTotalMatches = totalMatches,
+            )
+        }
     }
 
     private fun onActiveScroll(
@@ -1203,6 +1274,8 @@ class ReadingViewModel(
             tabs = strip.summaries(),
             activeTabId = tab.id,
             topBarColor = null,
+            isFullscreen = false,
+            findInPageVisible = false,
         )
         refreshBookmarked()
     }

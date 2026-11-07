@@ -2,6 +2,7 @@ package dev.clearbrowser.core.engine
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
@@ -102,7 +103,10 @@ class GeckoViewEngine(
             }
 
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
-                listener.onNewWindowRequested(uri)
+                val handled = handleUrl(uri)
+                if (!handled) {
+                    listener.onNewWindowRequested(uri)
+                }
                 return null
             }
 
@@ -167,6 +171,12 @@ class GeckoViewEngine(
                 mainHandler.postDelayed({
                     topBarSampler.sample(geckoView, currentUrlString)
                 }, 250)
+            }
+
+            override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
+                mainHandler.post {
+                    listener.onFullScreenChanged(fullScreen)
+                }
             }
 
             override fun onCrash(session: GeckoSession) {
@@ -319,18 +329,25 @@ class GeckoViewEngine(
     }
 
     private fun handleUrl(url: String): Boolean {
-        val scheme = url.substringBefore(':').lowercase()
-        return when (scheme) {
-            "http", "https", "about", "data", "file", "javascript", "resource" -> false
-            else -> {
-                runCatching {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    context.startActivity(intent)
+        val action = ExternalUrlHandler.handle(
+            url = url,
+            canResolve = { intent ->
+                context.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) != null
+            },
+        )
+        return when (action) {
+            is ExternalUrlAction.PassToBrowser -> false
+            is ExternalUrlAction.LaunchIntent -> {
+                runCatching { context.startActivity(action.intent) }
+                true
+            }
+            is ExternalUrlAction.LoadFallback -> {
+                mainHandler.post {
+                    loadUrl(action.fallbackUrl)
                 }
                 true
             }
+            is ExternalUrlAction.HandledNone -> true
         }
     }
 
@@ -369,6 +386,7 @@ class GeckoViewEngine(
     }
 
     override fun loadUrl(url: String) {
+        if (handleUrl(url)) return
         session.loadUri(url)
     }
 
@@ -458,6 +476,45 @@ class GeckoViewEngine(
     override fun setPageBackgroundColor(color: Int) {
         geckoView.coverUntilFirstPaint(color)
         geckoView.setBackgroundColor(color)
+    }
+
+    override fun exitFullScreen() {
+        session.exitFullScreen()
+    }
+
+    override fun findInPage(query: String, forward: Boolean) {
+        if (query.isBlank()) {
+            clearFindInPage()
+            return
+        }
+        session.finder.displayFlags = GeckoSession.FINDER_DISPLAY_HIGHLIGHT_ALL
+        val flags = if (forward) GeckoSession.FINDER_FIND_FORWARD else GeckoSession.FINDER_FIND_BACKWARDS
+        session.finder.find(query, flags).then(
+            { result ->
+                if (result != null) {
+                    mainHandler.post {
+                        listener.onFindResult(
+                            activeMatch = if (result.found) result.current else 0,
+                            totalMatches = if (result.found) result.total else 0,
+                        )
+                    }
+                }
+                GeckoResult.fromValue(null)
+            },
+            { _ ->
+                mainHandler.post {
+                    listener.onFindResult(activeMatch = 0, totalMatches = 0)
+                }
+                GeckoResult.fromValue(null)
+            },
+        )
+    }
+
+    override fun clearFindInPage() {
+        session.finder.clear()
+        mainHandler.post {
+            listener.onFindResult(activeMatch = 0, totalMatches = 0)
+        }
     }
 
     companion object {

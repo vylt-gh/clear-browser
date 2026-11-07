@@ -20,6 +20,10 @@ object ClearGeckoRuntime {
         }
     }
 
+    fun setPreferredColorScheme(scheme: Int) {
+        instance?.settings?.setPreferredColorScheme(scheme)
+    }
+
     private fun createRuntime(context: Context): GeckoRuntime {
         val settings = GeckoRuntimeSettings.Builder()
             .aboutConfigEnabled(true)

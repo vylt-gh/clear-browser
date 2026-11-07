@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.clearbrowser.JsDialogHost
 import dev.clearbrowser.core.data.ChromePosition
@@ -81,6 +82,12 @@ fun ReadingScreen(
     onIncognitoChange: (Boolean) -> Unit,
     onDismissJsDialog: () -> Unit,
     onOmniboxQueryChange: (String) -> Unit = {},
+    onWebThemeChange: (dev.clearbrowser.core.data.WebTheme) -> Unit = {},
+    onOpenFindInPage: () -> Unit = {},
+    onCloseFindInPage: () -> Unit = {},
+    onFindQueryChange: (String) -> Unit = {},
+    onFindNext: () -> Unit = {},
+    onFindPrevious: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
@@ -99,31 +106,33 @@ fun ReadingScreen(
                 .background(MaterialTheme.colorScheme.surface),
         ) {
             // Web content starts directly below the status bar, placed safely out of the
-            // phone's notch and status bar area.
+            // phone's notch and status bar area (or full screen in HTML5 fullscreen video mode).
             AndroidView(
                 factory = { context -> WebContainer(context) },
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = statusBarTop)
+                    .padding(top = if (state.isFullscreen) 0.dp else statusBarTop)
                     .testTag("web-content"),
                 update = { holder -> attachEngine(holder) },
             )
 
             // Top status bar strip: fills the status bar area with the website's
             // sampled top bar color (or theme surface on the start page / pending sample).
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(statusBarTop)
-                    .background(
-                        if (!state.isStartPage && state.topBarColor != null) {
-                            Color(state.topBarColor)
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        }
-                    )
-                    .align(Alignment.TopCenter),
-            )
+            if (!state.isFullscreen) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(statusBarTop)
+                        .background(
+                            if (!state.isStartPage && state.topBarColor != null) {
+                                Color(state.topBarColor)
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }
+                        )
+                        .align(Alignment.TopCenter),
+                )
+            }
 
             // No scrim over the top of the page any more. The engine insets its
             // content below the status bar, so the strip is the page's own flat
@@ -138,15 +147,17 @@ fun ReadingScreen(
             // composition would have to rebuild the whole engine to get it back.
             // Nothing is hidden by covering it -- the engine has no page loaded
             // at this point, which is exactly what makes this the start page.
-            AnimatedVisibility(
-                visible = state.isStartPage,
-                enter = fadeIn(chromeFadeSpec()),
-                exit = fadeOut(chromeFadeSpec()),
-            ) {
-                StartPage()
+            if (!state.isFullscreen) {
+                AnimatedVisibility(
+                    visible = state.isStartPage,
+                    enter = fadeIn(chromeFadeSpec()),
+                    exit = fadeOut(chromeFadeSpec()),
+                ) {
+                    StartPage()
+                }
             }
 
-            if (state.chromeMode == ChromeMode.EXPANDED) {
+            if (state.chromeMode == ChromeMode.EXPANDED && !state.isFullscreen) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -159,23 +170,40 @@ fun ReadingScreen(
                 )
             }
 
-            ChromeSurface(
-                state = state,
-                onBack = onBack,
-                onReload = onReload,
-                onStop = onStop,
-                onMenu = onMenu,
-                onOpenTabs = onOpenTabs,
-                onExpandOmnibox = onExpandOmnibox,
-                onNavigate = onNavigate,
-                onCollapseOmnibox = onCollapseOmnibox,
-                onReveal = onToggleChrome,
-                onBoundsChanged = onChromeBounds,
-                onQueryChange = onOmniboxQueryChange,
-                // The bottom edge is the whole design: the thumb should not have
-                // to reach past the content to find the controls.
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
+            if (!state.isFullscreen) {
+                ChromeSurface(
+                    state = state,
+                    onBack = onBack,
+                    onReload = onReload,
+                    onStop = onStop,
+                    onMenu = onMenu,
+                    onOpenTabs = onOpenTabs,
+                    onExpandOmnibox = onExpandOmnibox,
+                    onNavigate = onNavigate,
+                    onCollapseOmnibox = onCollapseOmnibox,
+                    onReveal = onToggleChrome,
+                    onBoundsChanged = onChromeBounds,
+                    onQueryChange = onOmniboxQueryChange,
+                    // The bottom edge is the whole design: the thumb should not have
+                    // to reach past the content to find the controls.
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
+
+            if (state.findInPageVisible && !state.isFullscreen) {
+                FindInPageBar(
+                    query = state.findQuery,
+                    activeMatch = state.findActiveMatch,
+                    totalMatches = state.findTotalMatches,
+                    onQueryChange = onFindQueryChange,
+                    onNext = onFindNext,
+                    onPrevious = onFindPrevious,
+                    onClose = onCloseFindInPage,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = statusBarTop),
+                )
+            }
 
             // Inside the theme on purpose. Composed outside it, a dialog would
             // silently fall back to the neutral palette and appear to belong to
@@ -217,6 +245,8 @@ fun ReadingScreen(
                     onDesktopSiteChange = onDesktopSiteChange,
                     onImmersiveChange = onImmersiveChange,
                     onIncognitoChange = onIncognitoChange,
+                    onWebThemeChange = onWebThemeChange,
+                    onOpenFindInPage = onOpenFindInPage,
                     canBookmark = state.canBookmark,
                     isBookmarked = state.isBookmarked,
                     onToggleBookmark = onToggleBookmark,

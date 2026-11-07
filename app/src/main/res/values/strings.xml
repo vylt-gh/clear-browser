@@ -62,4 +62,18 @@
     </plurals>
     <string name="menu_dynamic_color">Use wallpaper colours</string>
     <string name="menu_dynamic_color_subtitle">Material palette from your wallpaper</string>
+
+    <string name="menu_find_in_page">Find in page</string>
+    <string name="menu_find_in_page_subtitle">Search text on current page</string>
+    <string name="menu_web_theme">Web content theme</string>
+    <string name="menu_web_theme_subtitle">Tell websites whether to use dark or light mode</string>
+    <string name="web_theme_system">System</string>
+    <string name="web_theme_dark">Dark</string>
+    <string name="web_theme_light">Light</string>
+    <string name="find_in_page_placeholder">Find in page…</string>
+    <string name="find_in_page_no_matches">0/0</string>
+    <string name="find_in_page_match_count">%1$d of %2$d</string>
+    <string name="find_in_page_prev">Previous</string>
+    <string name="find_in_page_next">Next</string>
+    <string name="find_in_page_close">Close</string>
 </resources>

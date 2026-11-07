@@ -45,4 +45,7 @@ fun resolveAddress(raw: String, engine: SearchEngine): String? {
  * deliberately running something and silently searching for it instead would
  * be a surprise.
  */
-private val SCHEMES = listOf("http://", "https://", "about:", "data:", "file:", "javascript:")
+private val SCHEMES = listOf(
+    "http://", "https://", "about:", "data:", "file:", "javascript:",
+    "intent:", "market:", "mailto:", "tel:", "sms:", "geo:", "maps:",
+)

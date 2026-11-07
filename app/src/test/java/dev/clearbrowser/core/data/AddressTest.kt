@@ -26,6 +26,10 @@ class AddressTest {
         assertEquals("https://kagi.com/x", resolveAddress("https://kagi.com/x", kagi))
         assertEquals("http://localhost:8080", resolveAddress("http://localhost:8080", kagi))
         assertEquals("about:blank", resolveAddress("about:blank", kagi))
+        assertEquals("intent://test#Intent;end", resolveAddress("intent://test#Intent;end", kagi))
+        assertEquals("mailto:test@example.com", resolveAddress("mailto:test@example.com", kagi))
+        assertEquals("tel:+1234567890", resolveAddress("tel:+1234567890", kagi))
+        assertEquals("market://details?id=app", resolveAddress("market://details?id=app", kagi))
     }
 
     @Test

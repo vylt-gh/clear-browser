@@ -127,6 +127,15 @@ interface Engine {
      * the page had not committed to yet.
      */
     fun setPageBackgroundColor(color: Int)
+
+    /** Exit HTML5 fullscreen element/video playback. */
+    fun exitFullScreen() = Unit
+
+    /** Search for text within the current page. */
+    fun findInPage(query: String, forward: Boolean = true) = Unit
+
+    /** Clear active page find highlights. */
+    fun clearFindInPage() = Unit
 }
 
 /**
@@ -175,6 +184,12 @@ interface EngineListener {
      * Dominant or average top bar color sampled from the webpage, and whether the color is light.
      */
     fun onTopBarColorSampled(color: Int, isLight: Boolean) = Unit
+
+    /** HTML5 video or element entered or exited fullscreen mode. */
+    fun onFullScreenChanged(fullScreen: Boolean) = Unit
+
+    /** Active find in page result. */
+    fun onFindResult(activeMatch: Int, totalMatches: Int) = Unit
 }
 
 /**

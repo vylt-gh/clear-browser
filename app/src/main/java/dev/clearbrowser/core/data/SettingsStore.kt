@@ -43,6 +43,13 @@ enum class ChromePosition {
     RIGHT,
 }
 
+/** Preferred theme for web content (prefers-color-scheme). */
+enum class WebTheme {
+    SYSTEM,
+    DARK,
+    LIGHT,
+}
+
 data class BrowserSettings(
     /** Hide the chrome when scrolling down, reveal on scroll up or tap. */
     val autoHideChrome: Boolean = true,
@@ -74,6 +81,9 @@ data class BrowserSettings(
      * is in force.
      */
     val searchEngine: SearchEngine = SearchEngine.KAGI,
+
+    /** Preferred color scheme for websites (prefers-color-scheme). */
+    val webTheme: WebTheme = WebTheme.SYSTEM,
 ) {
 }
 
@@ -104,6 +114,8 @@ class SettingsStore(context: Context) {
 
     fun setSearchEngine(engine: SearchEngine) = update { it.copy(searchEngine = engine) }
 
+    fun setWebTheme(theme: WebTheme) = update { it.copy(webTheme = theme) }
+
     private inline fun update(transform: (BrowserSettings) -> BrowserSettings) {
         val next = transform(_state.value)
         _state.value = next
@@ -114,6 +126,7 @@ class SettingsStore(context: Context) {
             .putString(KEY_POSITION, next.chromePosition.name)
             .putBoolean(KEY_DYNAMIC, next.dynamicColor)
             .putString(KEY_SEARCH_ENGINE, next.searchEngine.name)
+            .putString(KEY_WEB_THEME, next.webTheme.name)
             .apply()
     }
 
@@ -130,6 +143,9 @@ class SettingsStore(context: Context) {
         searchEngine = prefs.getString(KEY_SEARCH_ENGINE, null)
             ?.let { runCatching { SearchEngine.valueOf(it) }.getOrNull() }
             ?: SearchEngine.KAGI,
+        webTheme = prefs.getString(KEY_WEB_THEME, null)
+            ?.let { runCatching { WebTheme.valueOf(it) }.getOrNull() }
+            ?: WebTheme.SYSTEM,
     )
 
     private companion object {
@@ -139,5 +155,6 @@ class SettingsStore(context: Context) {
         const val KEY_POSITION = "chrome_position"
         const val KEY_DYNAMIC = "dynamic_color"
         const val KEY_SEARCH_ENGINE = "search_engine"
+        const val KEY_WEB_THEME = "web_theme"
     }
 }

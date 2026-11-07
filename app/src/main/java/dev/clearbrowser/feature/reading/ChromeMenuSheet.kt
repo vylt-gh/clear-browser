@@ -48,13 +48,18 @@ import androidx.compose.material.icons.automirrored.rounded.AlignHorizontalRight
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.AlignHorizontalCenter
 import androidx.compose.material.icons.rounded.Bookmarks
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.BrowserSettings
 import dev.clearbrowser.core.data.ChromePosition
 import dev.clearbrowser.core.data.SearchEngine
+import dev.clearbrowser.core.data.WebTheme
 import kotlin.math.roundToInt
 
 /**
@@ -78,6 +83,8 @@ fun ChromeMenuSheet(
     onDesktopSiteChange: (Boolean) -> Unit,
     onImmersiveChange: (Boolean) -> Unit,
     onIncognitoChange: (Boolean) -> Unit,
+    onWebThemeChange: (WebTheme) -> Unit,
+    onOpenFindInPage: () -> Unit,
     canBookmark: Boolean,
     isBookmarked: Boolean,
     onToggleBookmark: () -> Unit,
@@ -127,6 +134,12 @@ fun ChromeMenuSheet(
                 onToggle = onToggleBookmark,
             )
             LibraryNavigationRow(onOpenLibrary = onOpenLibrary)
+            if (!state.isStartPage) {
+                FindInPageRow(onOpenFindInPage = {
+                    onDismiss()
+                    onOpenFindInPage()
+                })
+            }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
@@ -148,6 +161,13 @@ fun ChromeMenuSheet(
             ChromePositionControl(
                 selected = settings.chromePosition,
                 onSelect = onChromePositionChange,
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            WebThemeControl(
+                selected = settings.webTheme,
+                onSelect = onWebThemeChange,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -489,5 +509,105 @@ private fun LibraryNavigationRow(onOpenLibrary: () -> Unit) {
             modifier = Modifier.size(22.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun FindInPageRow(onOpenFindInPage: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onOpenFindInPage)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Search,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text(
+                text = stringResource(R.string.menu_find_in_page),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.menu_find_in_page_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WebThemeControl(
+    selected: WebTheme,
+    onSelect: (WebTheme) -> Unit,
+) {
+    Column(modifier = Modifier.padding(top = 20.dp)) {
+        Text(
+            text = stringResource(R.string.menu_web_theme),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.menu_web_theme_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+        ) {
+            WebTheme.entries.forEachIndexed { index, theme ->
+                SegmentedButton(
+                    selected = selected == theme,
+                    onClick = { onSelect(theme) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = WebTheme.entries.size,
+                    ),
+                    icon = {},
+                    label = {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = when (theme) {
+                                    WebTheme.SYSTEM -> Icons.Rounded.BrightnessAuto
+                                    WebTheme.DARK -> Icons.Rounded.DarkMode
+                                    WebTheme.LIGHT -> Icons.Rounded.LightMode
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                text = when (theme) {
+                                    WebTheme.SYSTEM -> stringResource(R.string.web_theme_system)
+                                    WebTheme.DARK -> stringResource(R.string.web_theme_dark)
+                                    WebTheme.LIGHT -> stringResource(R.string.web_theme_light)
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
+                    },
+                )
+            }
+        }
     }
 }

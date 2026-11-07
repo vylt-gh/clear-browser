@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-77%20passing-success" alt="Tests: 77 passing" />
+  <img src="https://img.shields.io/badge/Tests-89%20passing-success" alt="Tests: 89 passing" />
 </p>
 
 ---
@@ -61,6 +61,11 @@ The web page is the content; the chrome is just the tool. When you scroll to rea
 ### Minimalist & Responsive Interface
 - **Unified Morphing Surface**: Rather than jarringly animating separate toolbars and buttons, the omnibox dynamically morphs into an unobtrusive reveal handle and back using physics-based spring animations (`Motion.kt`).
 - **Customizable Handle Position**: Dock the collapsed reveal handle to the **Left**, **Center**, or **Right** of the screen so it never covers in-page elements, chat widgets, or cookie banners.
+- **Find in Page**: Dedicated floating search bar with match counter (`X of Y`), forward/backward navigation arrows, and native Gecko multi-highlighting.
+- **Web Content Dark Mode**: 3-way toggle (System / Dark / Light) communicating your theme preference directly to websites via CSS `prefers-color-scheme` without requiring page reloads.
+- **HTML5 Fullscreen Video**: Native immersive fullscreen for web videos and elements (`onFullScreen`), hiding all system and compose chrome while preserving back gesture control.
+- **External App & Intent URI Handling**: Robust routing for `intent://`, `market://`, `mailto:`, `tel:`, and app deep links, with automatic fallback to `browser_fallback_url` or Play Store web.
+- **Command & Automation Dispatch**: Control all browser actions (search, tabs, theme, menu, navigation) directly through Android Intent extras for easy testing and automation.
 - **Full-Bleed Viewport**: Inset-free web view eliminates layout re-calculation jitter during scrolling, locking to a smooth 120fps display pipeline.
 - **Dynamic Theming**: Full Material 3 Expressive theming supporting dynamic wallpaper color extraction (Material You) and system Dark/Light themes.
 - **Immersive Mode**: Fullscreen mode option to hide both system navigation and status bars for distraction-free reading.
@@ -115,6 +120,7 @@ flowchart TD
     subgraph UI ["Compose UI Layer (feature/reading)"]
         RS[ReadingScreen]
         BC[BrowserChrome - Unified Morphing Surface]
+        FIPB[FindInPageBar - In-Page Search]
         CMS[ChromeMenuSheet]
         TS[TabsSheet]
         LS[LibrarySheet]
@@ -128,6 +134,7 @@ flowchart TD
         CGR[ClearGeckoRuntime - Singleton Manager]
         uBO["uBlock Origin MV2 (Built-in Extension)"]
         TBS[TopBarSampler - Dominant Color Extraction]
+        EUH[ExternalUrlHandler - Intent & URI Routing]
         CR[ChromeReservations - Touch Hit Bounds]
     end
 

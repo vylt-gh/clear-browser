@@ -102,13 +102,65 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val target = intent.dataString ?: return
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
         val viewModel = vm ?: return
-        // No deferral needed, and deliberately none: `withFrameNanos` requires a
-        // MonotonicFrameClock, which only exists inside a composition, so calling
-        // it from `lifecycleScope` throws. `setStartUrl` already handles the
-        // engine-not-yet-attached case by holding the URL until attach.
-        viewModel.setStartUrl(target)
+        val action = intent.action
+        val command = intent.getStringExtra("command") ?: intent.getStringExtra("action")
+
+        when {
+            command == "find" || action == "dev.clearbrowser.ACTION_FIND" -> {
+                viewModel.openFindInPage()
+                val q = intent.getStringExtra("query")
+                if (!q.isNullOrBlank()) {
+                    viewModel.setFindQuery(q)
+                }
+            }
+            command == "find_next" || action == "dev.clearbrowser.ACTION_FIND_NEXT" -> {
+                viewModel.findNext()
+            }
+            command == "find_prev" || action == "dev.clearbrowser.ACTION_FIND_PREV" -> {
+                viewModel.findPrevious()
+            }
+            command == "find_close" || action == "dev.clearbrowser.ACTION_FIND_CLOSE" -> {
+                viewModel.closeFindInPage()
+            }
+            command == "menu" || action == "dev.clearbrowser.ACTION_MENU" -> {
+                viewModel.setOverlay(true)
+            }
+            command == "tabs" || action == "dev.clearbrowser.ACTION_TABS" -> {
+                viewModel.openTabs()
+            }
+            command == "new_tab" || action == "dev.clearbrowser.ACTION_NEW_TAB" -> {
+                viewModel.newTab(intent.getStringExtra("url").orEmpty())
+            }
+            command == "theme" || action == "dev.clearbrowser.ACTION_SET_THEME" -> {
+                val themeStr = intent.getStringExtra("theme")?.uppercase()
+                val theme = when (themeStr) {
+                    "DARK" -> dev.clearbrowser.core.data.WebTheme.DARK
+                    "LIGHT" -> dev.clearbrowser.core.data.WebTheme.LIGHT
+                    else -> dev.clearbrowser.core.data.WebTheme.SYSTEM
+                }
+                settings.setWebTheme(theme)
+            }
+            command == "navigate" || action == "dev.clearbrowser.ACTION_NAVIGATE" -> {
+                val url = intent.getStringExtra("url") ?: intent.dataString
+                if (!url.isNullOrBlank()) viewModel.navigate(url)
+            }
+            command == "fullscreen" || action == "dev.clearbrowser.ACTION_FULLSCREEN" -> {
+                val exit = intent.getBooleanExtra("exit", false)
+                if (exit) viewModel.exitFullScreen()
+            }
+            intent.dataString != null -> {
+                viewModel.navigate(intent.dataString!!)
+            }
+            intent.hasExtra("url") -> {
+                intent.getStringExtra("url")?.let { viewModel.navigate(it) }
+            }
+        }
     }
 
     private var vm: ReadingViewModel? = null
@@ -157,9 +209,32 @@ class MainActivity : ComponentActivity() {
         // Recorded before the engine attaches, so the very first load is the
         // requested page rather than a detour through the start page.
         val startUrl = intent?.dataString
-        LaunchedEffect(Unit) { viewModel.setStartUrl(startUrl) }
+        LaunchedEffect(Unit) {
+            if (!startUrl.isNullOrBlank()) {
+                viewModel.setStartUrl(startUrl)
+            }
+            handleIntent(intent)
+        }
 
-        applyImmersive(state.settings.immersiveMode)
+        LaunchedEffect(state.isFullscreen, state.settings.immersiveMode) {
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+            if (state.isFullscreen) {
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                applyImmersive(state.settings.immersiveMode)
+            }
+        }
+
+        LaunchedEffect(state.settings.webTheme) {
+            val scheme = when (state.settings.webTheme) {
+                dev.clearbrowser.core.data.WebTheme.SYSTEM -> org.mozilla.geckoview.GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM
+                dev.clearbrowser.core.data.WebTheme.DARK -> org.mozilla.geckoview.GeckoRuntimeSettings.COLOR_SCHEME_DARK
+                dev.clearbrowser.core.data.WebTheme.LIGHT -> org.mozilla.geckoview.GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
+            }
+            dev.clearbrowser.core.engine.ClearGeckoRuntime.setPreferredColorScheme(scheme)
+        }
 
         val isDark = isSystemInDarkTheme()
         LaunchedEffect(state.isTopBarLight, state.isStartPage, isDark, state.topBarColor) {
@@ -178,7 +253,11 @@ class MainActivity : ComponentActivity() {
         // Android browsers annoy people.
         BackHandler(enabled = true) {
             when {
-                // The sheets are the first thing to go: a back gesture while a
+                // Fullscreen video / element is highest priority to exit on back press.
+                state.isFullscreen -> viewModel.exitFullScreen()
+                // Find in page is dismissed before sheet/history navigation.
+                state.findInPageVisible -> viewModel.closeFindInPage()
+                // The sheets are the next thing to go: a back gesture while a
                 // sheet is open means "close this", never "leave the page".
                 state.libraryTab != null -> viewModel.closeLibrary()
                 state.tabsVisible -> viewModel.closeTabs()
@@ -234,6 +313,12 @@ class MainActivity : ComponentActivity() {
             onIncognitoChange = viewModel::setIncognito,
             onDismissJsDialog = viewModel::dismissJsDialog,
             onOmniboxQueryChange = viewModel::onOmniboxQueryChanged,
+            onWebThemeChange = settings::setWebTheme,
+            onOpenFindInPage = viewModel::openFindInPage,
+            onCloseFindInPage = viewModel::closeFindInPage,
+            onFindQueryChange = viewModel::setFindQuery,
+            onFindNext = viewModel::findNext,
+            onFindPrevious = viewModel::findPrevious,
         )
     }
 
