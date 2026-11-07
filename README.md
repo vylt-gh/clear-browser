@@ -166,7 +166,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 64 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 72 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records
@@ -221,6 +221,12 @@ The output APK is generated at:
 | **Adblocker** | uBlock Origin Manifest V2 (MV2) | 1.75.4 |
 | **Architecture** | AndroidX Lifecycle & ViewModel Compose | 2.9.4 |
 | **Unit Testing** | JUnit 4 | 4.13.2 |
+
+---
+
+## AI Disclosure
+
+This project was developed with the assistance of AI coding agents (specifically Google DeepMind's Antigravity). Architecture, implementation, testing, and documentation were created, reviewed, and maintained through interactive pair programming with AI.
 
 ---
 
