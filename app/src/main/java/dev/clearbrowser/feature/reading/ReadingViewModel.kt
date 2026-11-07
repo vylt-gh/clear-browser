@@ -1005,10 +1005,11 @@ class ReadingViewModel(
             _state.value = _state.value.copy(scrollAtTop = atTop)
         }
 
-        // Only a scroll the user is actually driving may move the chrome.
-        // Pages scroll themselves constantly -- carousels, parallax heroes,
-        // lazy galleries -- and driving the chrome from raw scroll position made
-        // it flicker in and out on all of them, which reads as a browser bug.
+        // At or near the top, chrome should always be visible.
+        if (atTop) {
+            revealChrome()
+        }
+
         if (!userTouchActive) {
             scrollIntent.reset()
             return
@@ -1097,6 +1098,8 @@ class ReadingViewModel(
         // user is reading; hiding the chrome behind it would only mean the
         // controls are gone when the sheet closes.
         if (_state.value.libraryTab != null) return
+        // Do not hide chrome while reading at or near the top of the page.
+        if (_state.value.scrollAtTop) return
         _state.value = _state.value.copy(chromeMode = ChromeMode.READING)
     }
 

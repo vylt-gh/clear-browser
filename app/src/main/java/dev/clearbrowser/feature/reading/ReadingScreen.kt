@@ -102,30 +102,13 @@ fun ReadingScreen(
             // attaches it here. Keeping ownership in one place is what lets the
             // engine abstraction stay swappable.
             //
-            // The top inset is applied only while the page is at the top, and
-            // released as soon as it is not. Both halves of that are deliberate:
-            //
-            //  - At the top, a `position: fixed` header is otherwise sitting
-            //    under the status bar, where the status bar eats the touch
-            //    before the page ever sees it. Nothing the page does can fix
-            //    that. Insetting here makes it reachable.
-            //  - Scrolled, the content is already past that band, and the user
-            //    can plainly see it is there. Covering it with a filled strip
-            //    would hide the top of every page permanently, which is a worse
-            //    complaint than a partly-covered header.
-            //
-            // Animated rather than switched, because a hard jump on the first
-            // pixel of scroll reads as a glitch. It settles instead.
-            val topInset by animateDpAsState(
-                targetValue = if (state.scrollAtTop) statusBarTop else 0.dp,
-                animationSpec = tween(durationMillis = 160),
-                label = "top-inset",
-            )
+            // Laid out full-bleed: insetting the view dynamically on scroll
+            // triggers Chromium layout passes that mutate scrollY, causing
+            // jitter and feedback oscillation loops.
             AndroidView(
                 factory = { context -> WebContainer(context) },
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = topInset)
                     .testTag("web-content"),
                 update = { holder -> attachEngine(holder) },
             )

@@ -166,6 +166,7 @@ fun ChromeSurface(
                     bounds.set(window.left, window.top, window.right, window.bottom)
                     onBoundsChanged(bounds)
                 },
+            horizontalArrangement = if (position == ChromePosition.LEFT) Arrangement.Start else Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Cross-fade rather than swap: the handle's icon grows out of the

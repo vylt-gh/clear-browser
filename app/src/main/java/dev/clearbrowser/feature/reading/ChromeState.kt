@@ -39,10 +39,11 @@ class ScrollIntentDetector(
     /** Movement needed before a direction change is believed. */
     private val thresholdPx: Int = 48,
     /** Movement per event below which the gesture is probably a fling artefact. */
-    private val minDeltaPx: Int = 2,
+    private val minDeltaPx: Int = 1,
 ) {
     private var lastY = -1
     private var accumulated = 0
+    private var pendingDirection = Direction.NONE
     private var direction = Direction.NONE
 
     enum class Direction { NONE, DOWN, UP }
@@ -50,8 +51,8 @@ class ScrollIntentDetector(
     /**
      * Feed a new scroll position.
      *
-     * @param atRest true when the page cannot scroll any further in that
-     *   direction, which means the delta is rubber-band, not intent.
+     * @param canScrollUp whether the page has scrollable content above the current viewport.
+     * @param canScrollDown whether the page has scrollable content below the current viewport.
      * @return the accumulated direction, [Direction.NONE] when undecided.
      */
     fun onScroll(scrollY: Int, canScrollUp: Boolean, canScrollDown: Boolean): Direction {
@@ -63,30 +64,55 @@ class ScrollIntentDetector(
         lastY = scrollY
 
         if (delta == 0) return Direction.NONE
+
+        // At the top of the page, the user cannot scroll up further and chrome must stay visible.
+        if (!canScrollUp || scrollY <= 0) {
+            direction = Direction.UP
+            pendingDirection = Direction.NONE
+            accumulated = 0
+            return Direction.UP
+        }
+
         // Below the noise floor, so not worth crediting to either direction.
-        if (kotlin.math.abs(delta) < minDeltaPx) return direction.takeIf { it != Direction.NONE } ?: Direction.NONE
+        if (kotlin.math.abs(delta) < minDeltaPx) {
+            return Direction.NONE
+        }
 
         val observed = if (delta > 0) Direction.DOWN else Direction.UP
-        // Hiding while the page is pinned to the top would be wrong: the user is
+
+        // Hiding while the page is at or near the top would be wrong: the user is
         // not scrolling through content, they are starting a read.
-        if (observed == Direction.DOWN && !canScrollUp) return Direction.NONE
+        if (observed == Direction.DOWN && scrollY <= thresholdPx) {
+            return Direction.NONE
+        }
 
         if (observed == direction) {
             accumulated = 0
+            pendingDirection = Direction.NONE
             return direction
+        }
+
+        if (observed != pendingDirection) {
+            pendingDirection = observed
+            accumulated = 0
         }
 
         accumulated += kotlin.math.abs(delta)
         if (accumulated >= thresholdPx) {
             direction = observed
+            pendingDirection = Direction.NONE
             accumulated = 0
+            return direction
         }
-        return direction
+
+        // Undecided during a direction change: do not report the old opposite direction.
+        return Direction.NONE
     }
 
     fun reset() {
         lastY = -1
         accumulated = 0
+        pendingDirection = Direction.NONE
         direction = Direction.NONE
     }
 }
