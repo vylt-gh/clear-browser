@@ -5,7 +5,6 @@ import android.view.ViewGroup
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,26 +16,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.clearbrowser.JsDialogHost
 import dev.clearbrowser.core.data.ChromePosition
@@ -90,22 +81,13 @@ fun ReadingScreen(
     onIncognitoChange: (Boolean) -> Unit,
     onDismissJsDialog: () -> Unit,
     onOmniboxQueryChange: (String) -> Unit = {},
-    onStatusBarHeightChange: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
     LaunchedEffect(isDark) { onSystemDarkChange(isDark) }
 
-    val density = LocalDensity.current
-    // The status bar height, used to inset the page while it is at the top.
+    // The status bar height, used to place web content below the status bar.
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val statusBarTopPx = with(density) { statusBarTop.roundToPx() }
-
-    LaunchedEffect(statusBarTopPx) {
-        onStatusBarHeightChange(statusBarTopPx)
-    }
-
-    val topInsetDp = with(density) { state.topInsetPx.toDp() }
 
     ClearBrowserTheme(
         isDark = isDark,
@@ -116,32 +98,31 @@ fun ReadingScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface),
         ) {
-            // Extruded top bar strip: extends the website's top row of pixels
-            // seamlessly into the Android status bar area at the top of the page,
-            // shortening as the user scrolls down so it feels like part of the document.
-            if (!state.isStartPage && state.topInsetPx > 0) {
-                state.topBarBitmap?.let { bmp ->
-                    Image(
-                        bitmap = bmp.asImageBitmap(),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillBounds,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(topInsetDp)
-                            .align(Alignment.TopCenter),
-                    )
-                }
-            }
-
-            // Web content starts directly below the extruded strip at the top of the page,
-            // and moves up smoothly as the user scrolls down.
+            // Web content starts directly below the status bar, placed safely out of the
+            // phone's notch and status bar area.
             AndroidView(
                 factory = { context -> WebContainer(context) },
                 modifier = Modifier
                     .fillMaxSize()
-                    .offset { IntOffset(0, state.topInsetPx) }
+                    .padding(top = statusBarTop)
                     .testTag("web-content"),
                 update = { holder -> attachEngine(holder) },
+            )
+
+            // Top status bar strip: fills the status bar area with the website's
+            // sampled top bar color (or theme surface on the start page / pending sample).
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(statusBarTop)
+                    .background(
+                        if (!state.isStartPage && state.topBarColor != null) {
+                            Color(state.topBarColor)
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    )
+                    .align(Alignment.TopCenter),
             )
 
             // No scrim over the top of the page any more. The engine insets its

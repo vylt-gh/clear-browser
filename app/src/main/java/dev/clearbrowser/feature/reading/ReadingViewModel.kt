@@ -70,12 +70,10 @@ data class ReadingUiState(
     val libraryTab: LibraryTab? = null,
     /** Live query suggestions, matching bookmarks, and history entries. */
     val searchSuggestions: List<dev.clearbrowser.core.data.SearchSuggestion> = emptyList(),
-    /** Extruded bitmap row sampled from the top of the webpage. */
-    val topBarBitmap: android.graphics.Bitmap? = null,
+    /** Dominant or average top bar color of the webpage, null if not sampled or on start page. */
+    val topBarColor: Int? = null,
     /** Whether the webpage top background is light, for status bar icon contrast. */
     val isTopBarLight: Boolean = true,
-    /** Dynamic top inset in pixels that smoothly shortens as the page scrolls down. */
-    val topInsetPx: Int = 0,
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -1053,29 +1051,9 @@ class ReadingViewModel(
             _state.value = _state.value.copy(jsDialog = dialog)
         }
 
-        override fun onTopBarSampled(bitmap: android.graphics.Bitmap, isLight: Boolean) {
+        override fun onTopBarColorSampled(color: Int, isLight: Boolean) {
             if (!isActive) return
-            _state.value = _state.value.copy(topBarBitmap = bitmap, isTopBarLight = isLight)
-        }
-    }
-
-    private var statusBarHeightPx: Int = 0
-
-    fun setStatusBarHeightPx(heightPx: Int) {
-        if (statusBarHeightPx == heightPx) return
-        statusBarHeightPx = heightPx
-        val currentScroll = engineForActive()?.currentScrollY() ?: 0
-        updateTopInset(currentScroll)
-    }
-
-    private fun updateTopInset(scrollY: Int) {
-        val inset = if (_state.value.isStartPage || statusBarHeightPx <= 0) {
-            0
-        } else {
-            (statusBarHeightPx - scrollY).coerceIn(0, statusBarHeightPx)
-        }
-        if (inset != _state.value.topInsetPx) {
-            _state.value = _state.value.copy(topInsetPx = inset)
+            _state.value = _state.value.copy(topBarColor = color, isTopBarLight = isLight)
         }
     }
 
@@ -1088,8 +1066,6 @@ class ReadingViewModel(
     ) {
         lastHeight[tabId] = max(lastHeight[tabId] ?: 0, scrollY + VIEWPORT_ESTIMATE_PX)
         if ((pendingScroll[tabId] ?: 0) > 0) tryApplyPendingScroll(tabId)
-
-        updateTopInset(scrollY)
 
         val atTop = scrollY <= AT_TOP_SLOP_PX
         if (atTop != _state.value.scrollAtTop) {
@@ -1177,6 +1153,7 @@ class ReadingViewModel(
         // that was in flight across a navigation could be credited to the page
         // the user just landed on.
         scrollIntent.reset()
+        _state.value = _state.value.copy(topBarColor = null)
     }
 
     private fun hideForReading() {
@@ -1225,6 +1202,7 @@ class ReadingViewModel(
             jsDialog = null,
             tabs = strip.summaries(),
             activeTabId = tab.id,
+            topBarColor = null,
         )
         refreshBookmarked()
     }

@@ -45,8 +45,8 @@ class GeckoViewEngine(
     private var lastSessionState: GeckoSession.SessionState? = null
 
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val topBarSampler = TopBarSampler { bitmap, isLight ->
-        listener.onTopBarSampled(bitmap, isLight)
+    private val topBarSampler = TopBarSampler { color, isLight ->
+        listener.onTopBarColorSampled(color, isLight)
     }
 
     private val contextId: String? = if (profile.isIncognito) {
@@ -123,15 +123,16 @@ class GeckoViewEngine(
             override fun onPageStart(session: GeckoSession, url: String) {
                 currentUrlString = url
                 currentScrollYPos = 0
+                topBarSampler.reset()
                 listener.onUrlChanged(url)
                 listener.onLoadStateChanged(LoadState.LOADING)
             }
 
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 listener.onLoadStateChanged(LoadState.COMPLETE)
-                topBarSampler.sample(geckoView)
-                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 150)
-                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 400)
+                mainHandler.postDelayed({
+                    topBarSampler.sample(geckoView, currentUrlString, force = true)
+                }, 200)
             }
 
             override fun onProgressChange(session: GeckoSession, progress: Int) {
@@ -159,13 +160,13 @@ class GeckoViewEngine(
             override fun onFirstComposite(session: GeckoSession) {
                 listener.onLoadStateChanged(LoadState.COMMITTED)
                 listener.onPageCommitted(currentUrlString.orEmpty())
-                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 50)
             }
 
             override fun onFirstContentfulPaint(session: GeckoSession) {
-                topBarSampler.sample(geckoView)
-                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 200)
-                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 500)
+                topBarSampler.sample(geckoView, currentUrlString)
+                mainHandler.postDelayed({
+                    topBarSampler.sample(geckoView, currentUrlString)
+                }, 250)
             }
 
             override fun onCrash(session: GeckoSession) {
@@ -215,11 +216,6 @@ class GeckoViewEngine(
                         canScrollDown = canDown,
                         userTouchActive = isUser,
                     )
-                    // Only sample at the very top of the document.
-                    // Never sample while scrolling down through page content so text is never stretched.
-                    if (scrollY <= 4) {
-                        topBarSampler.sample(geckoView)
-                    }
                 }
             }
         }
@@ -361,7 +357,7 @@ class GeckoViewEngine(
             ),
         )
         geckoView.setSession(session)
-        mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 200)
+        mainHandler.postDelayed({ topBarSampler.sample(geckoView, currentUrlString) }, 200)
     }
 
     override fun detach() {

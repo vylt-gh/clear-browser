@@ -11,6 +11,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -43,7 +44,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -56,9 +56,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -182,6 +184,9 @@ fun ChromeSurface(
         val currentWidth = lerpDp(handleWidth, expandedWidth, progress)
         val currentOffset = lerpDp(handleOffset, 0.dp, progress)
 
+        val isDark = isSystemInDarkTheme()
+        val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
+
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -212,27 +217,15 @@ fun ChromeSurface(
                     .width(currentWidth)
                     .height(HANDLE_SIZE)
                     .graphicsLayer { translationX = currentOffset.toPx() }
+                    .shadow(
+                        elevation = if (progress > 0.5f) 14.dp else 4.dp,
+                        shape = CircleShape,
+                        spotColor = if (isDark) Color.Black.copy(alpha = 0.55f) else Color(0x30000000),
+                        ambientColor = if (isDark) Color.Black.copy(alpha = 0.35f) else Color(0x15000000),
+                    )
                     .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.88f),
-                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.78f),
-                            )
-                        )
-                    )
-                    .border(
-                        BorderStroke(
-                            1.dp,
-                            Brush.verticalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
-                                )
-                            ),
-                        ),
-                        CircleShape,
-                    )
+                    .background(frostedBackground)
+                    .border(BorderStroke(1.dp, frostedBorder), CircleShape)
                     .onGloballyPositioned { coords ->
                         val window = coords.boundsInWindow()
                         bounds.set(window.left, window.top, window.right, window.bottom)
@@ -337,15 +330,18 @@ private fun CompactBar(
                 )
             }
 
+            val isDark = isSystemInDarkTheme()
             Row(
                 modifier = Modifier
                     .weight(1f)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f))
+                    .background(
+                        if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+                    )
                     .border(
                         BorderStroke(
                             0.75.dp,
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                            if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f),
                         ),
                         CircleShape,
                     )
@@ -510,27 +506,70 @@ private fun ExpandedOmnibox(
 }
 
 @Composable
+private fun rememberFrostedGlassBrushes(isDark: Boolean): Pair<Brush, Brush> {
+    return remember(isDark) {
+        val background = if (isDark) {
+            Brush.verticalGradient(
+                listOf(
+                    Color(0xD8272938), // Translucent acrylic top highlight
+                    Color(0xB51A1C29), // Translucent body
+                    Color(0x9E12131F), // Deeper base
+                )
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    Color(0xF2FFFFFF), // Bright specular white catch
+                    Color(0xD4F0F4FA), // Frosted translucent body
+                    Color(0xBCDFE5F0), // Cool tinted base
+                )
+            )
+        }
+
+        val border = if (isDark) {
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.36f), // Specular rim reflection
+                    Color.White.copy(alpha = 0.12f),
+                    Color.White.copy(alpha = 0.04f), // Soft base rim
+                )
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.95f), // Specular highlight
+                    Color(0x35000000),               // Crisp edge definition
+                    Color(0x12000000),
+                )
+            )
+        }
+
+        background to border
+    }
+}
+
+@Composable
 private fun SuggestionsCard(
     suggestions: List<SearchSuggestion>,
     onSelect: (SearchSuggestion) -> Unit,
     onInsert: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.90f),
-        tonalElevation = 3.dp,
-        shadowElevation = 8.dp,
-        border = BorderStroke(
-            1.dp,
-            Brush.verticalGradient(
-                listOf(
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f),
-                )
-            ),
-        ),
+    val isDark = isSystemInDarkTheme()
+    val shape = RoundedCornerShape(24.dp)
+    val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
+
+    Box(
+        modifier = modifier
+            .shadow(
+                elevation = 16.dp,
+                shape = shape,
+                spotColor = if (isDark) Color.Black.copy(alpha = 0.65f) else Color(0x35000000),
+                ambientColor = if (isDark) Color.Black.copy(alpha = 0.40f) else Color(0x18000000),
+            )
+            .clip(shape)
+            .background(frostedBackground)
+            .border(BorderStroke(1.dp, frostedBorder), shape),
     ) {
         LazyColumn(
             modifier = Modifier
@@ -540,7 +579,7 @@ private fun SuggestionsCard(
             itemsIndexed(suggestions) { index, suggestion ->
                 if (index > 0) {
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        color = if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f),
                         thickness = 0.5.dp,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )

@@ -172,9 +172,9 @@ interface EngineListener {
     fun onJsDialog(dialog: JsDialog) = Unit
 
     /**
-     * Extruded pixel row sampled from the top of the webpage, and whether the background is light.
+     * Dominant or average top bar color sampled from the webpage, and whether the color is light.
      */
-    fun onTopBarSampled(bitmap: android.graphics.Bitmap, isLight: Boolean) = Unit
+    fun onTopBarColorSampled(color: Int, isLight: Boolean) = Unit
 }
 
 /**
