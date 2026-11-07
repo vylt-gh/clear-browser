@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -102,17 +105,29 @@ fun ReadingScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface),
         ) {
-            // A bare container, not a WebView: the engine owns its WebView and
-            // attaches it here. Keeping ownership in one place is what lets the
-            // engine abstraction stay swappable.
-            //
-            // Laid out full-bleed: insetting the view dynamically on scroll
-            // triggers Chromium layout passes that mutate scrollY, causing
-            // jitter and feedback oscillation loops.
+            // Extruded top bar strip: extends the website's top row of pixels
+            // seamlessly into the Android status bar area.
+            if (!state.isStartPage && statusBarTop > 0.dp) {
+                state.topBarBitmap?.let { bmp ->
+                    Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = null,
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(statusBarTop)
+                            .align(Alignment.TopCenter),
+                    )
+                }
+            }
+
+            // Web content starts directly below the status bar, keeping
+            // all interactive website navigation, titles, and menus fully reachable.
             AndroidView(
                 factory = { context -> WebContainer(context) },
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(top = statusBarTop)
                     .testTag("web-content"),
                 update = { holder -> attachEngine(holder) },
             )

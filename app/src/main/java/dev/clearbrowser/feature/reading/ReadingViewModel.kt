@@ -70,6 +70,10 @@ data class ReadingUiState(
     val libraryTab: LibraryTab? = null,
     /** Live query suggestions, matching bookmarks, and history entries. */
     val searchSuggestions: List<dev.clearbrowser.core.data.SearchSuggestion> = emptyList(),
+    /** Extruded bitmap row sampled from the top of the webpage. */
+    val topBarBitmap: android.graphics.Bitmap? = null,
+    /** Whether the webpage top background is light, for status bar icon contrast. */
+    val isTopBarLight: Boolean = true,
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -1045,6 +1049,11 @@ class ReadingViewModel(
                 return
             }
             _state.value = _state.value.copy(jsDialog = dialog)
+        }
+
+        override fun onTopBarSampled(bitmap: android.graphics.Bitmap, isLight: Boolean) {
+            if (!isActive) return
+            _state.value = _state.value.copy(topBarBitmap = bitmap, isTopBarLight = isLight)
         }
     }
 

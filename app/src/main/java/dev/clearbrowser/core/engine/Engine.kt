@@ -170,6 +170,11 @@ interface EngineListener {
 
     /** A JS `alert`/`confirm`/`prompt` the host must present. */
     fun onJsDialog(dialog: JsDialog) = Unit
+
+    /**
+     * Extruded pixel row sampled from the top of the webpage, and whether the background is light.
+     */
+    fun onTopBarSampled(bitmap: android.graphics.Bitmap, isLight: Boolean) = Unit
 }
 
 /**

@@ -161,11 +161,11 @@ class MainActivity : ComponentActivity() {
 
         applyImmersive(state.settings.immersiveMode)
 
-        // The status bar is transparent over the page, so its icons have to
-        // contrast with whatever is behind them. With no page tinting left
-        // there is nothing page-specific to react to, so the system scheme is
-        // the answer -- and the app's own surface is a near match for it.
-        applyStatusBarIcons(systemIsDark = isSystemInDarkTheme())
+        val isDark = isSystemInDarkTheme()
+        LaunchedEffect(state.isTopBarLight, state.isStartPage, isDark) {
+            val lightBackground = if (state.isStartPage) !isDark else state.isTopBarLight
+            applyStatusBarIcons(isLight = lightBackground)
+        }
 
         // Back is a browsing gesture before it is an app gesture. Priority order
         // matters: dismiss what the user summoned, then walk history, and only
@@ -240,15 +240,15 @@ class MainActivity : ComponentActivity() {
      * draw dark icons". Cached so the window call only happens when the answer
      * actually changes.
      */
-    private fun applyStatusBarIcons(systemIsDark: Boolean) {
-        if (lastSystemIsDark == systemIsDark) return
-        lastSystemIsDark = systemIsDark
+    private fun applyStatusBarIcons(isLight: Boolean) {
+        if (lastIsLight == isLight) return
+        lastIsLight = isLight
         WindowCompat.getInsetsController(window, window.decorView)
-            .isAppearanceLightStatusBars = !systemIsDark
+            .isAppearanceLightStatusBars = isLight
     }
 
     /** Null until the first pass, so the initial call is never skipped. */
-    private var lastSystemIsDark: Boolean? = null
+    private var lastIsLight: Boolean? = null
 
     /**
      * Immersive hides the system bars as well as our chrome, so a page is the

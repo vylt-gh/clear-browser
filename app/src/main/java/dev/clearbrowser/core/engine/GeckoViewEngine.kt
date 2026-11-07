@@ -45,6 +45,9 @@ class GeckoViewEngine(
     private var lastSessionState: GeckoSession.SessionState? = null
 
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val topBarSampler = TopBarSampler { bitmap, isLight ->
+        listener.onTopBarSampled(bitmap, isLight)
+    }
 
     private val contextId: String? = if (profile.isIncognito) {
         "private_${profile.name}"
@@ -126,6 +129,7 @@ class GeckoViewEngine(
 
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 listener.onLoadStateChanged(LoadState.COMPLETE)
+                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 100)
             }
 
             override fun onProgressChange(session: GeckoSession, progress: Int) {
@@ -153,6 +157,7 @@ class GeckoViewEngine(
             override fun onFirstComposite(session: GeckoSession) {
                 listener.onLoadStateChanged(LoadState.COMMITTED)
                 listener.onPageCommitted(currentUrlString.orEmpty())
+                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 50)
             }
 
             override fun onCrash(session: GeckoSession) {
@@ -202,6 +207,7 @@ class GeckoViewEngine(
                         canScrollDown = canDown,
                         userTouchActive = isUser,
                     )
+                    topBarSampler.sample(geckoView)
                 }
             }
         }
@@ -343,6 +349,7 @@ class GeckoViewEngine(
             ),
         )
         geckoView.setSession(session)
+        mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 100)
     }
 
     override fun detach() {

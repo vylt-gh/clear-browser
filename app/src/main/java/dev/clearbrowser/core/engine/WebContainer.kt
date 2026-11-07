@@ -134,6 +134,11 @@ class WebContainer(context: Context) : FrameLayout(context) {
         getLocationInWindow(locationInWindow)
     }
 
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        getLocationInWindow(locationInWindow)
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean = false
 }
