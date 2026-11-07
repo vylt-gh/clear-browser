@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+      Cleartext stays off everywhere except loopback.
+
+      The app is a browser, so refusing plain HTTP is the correct default and
+      there is no reason to weaken it for real sites. Loopback is the exception:
+      a developer running `localhost:3000` is a legitimate browser user, and
+      cleartext to the device's own loopback never leaves the device. Scoping it
+      this narrowly is the difference between "allows cleartext" and "allows
+      cleartext to somewhere you did not mean".
+    -->
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <!-- IPv6 loopback, which a device resolves when a site says localhost. -->
+        <domain includeSubdomains="false">::1</domain>
+    </domain-config>
+</network-security-config>

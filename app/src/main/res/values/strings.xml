@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Clear</string>
+
+    <string name="chrome_url_field">Address</string>
+    <string name="chrome_reload">Reload</string>
+    <string name="chrome_reload_stop">Stop</string>
+    <string name="chrome_back">Back</string>
+    <string name="chrome_menu">Menu</string>
+    <string name="chrome_enter_url">Search with %1$s or enter address</string>
+    <string name="chrome_hide_chrome">Hide browser controls</string>
+    <string name="chrome_show_chrome">Show browser controls</string>
+
+    <string name="menu_desktop_site">Request desktop site</string>
+    <string name="menu_desktop_site_subtitle">Ask sites for their desktop layout</string>
+
+    <string name="menu_search_engine">Search engine</string>
+    <string name="menu_search_engine_subtitle">Where words you type that are not addresses are sent.</string>
+    <string name="menu_chrome_position">Handle position</string>
+    <string name="menu_chrome_position_subtitle">Where the small button sits while you read, so it does not cover a site\'s own controls.</string>
+
+    <string name="chrome_position_left">Handle on the left</string>
+    <string name="chrome_position_center">Handle in the centre</string>
+    <string name="chrome_position_right">Handle on the right</string>
+    <string name="menu_bookmark_page">Bookmark this page</string>
+    <string name="menu_bookmarked_page">Bookmarked</string>
+    <string name="menu_bookmark_subtitle">Save it for one tap later</string>
+    <string name="menu_bookmark_no_page">Open a page first</string>
+    <string name="menu_bookmark_private">Not saved in a private window</string>
+
+    <string name="library_bookmarks">Bookmarks</string>
+    <string name="library_history">History</string>
+    <string name="library_menu_title">Bookmarks and history</string>
+    <string name="library_menu_subtitle">Pages you saved, and pages you visited</string>
+    <string name="library_clear">Clear</string>
+    <string name="library_cancel">Cancel</string>
+    <string name="library_remove_bookmark">Remove bookmark</string>
+    <string name="library_remove_history">Remove from history</string>
+    <string name="library_empty_bookmarks">No bookmarks yet</string>
+    <string name="library_empty_bookmarks_hint">Pages you bookmark stay here for one-tap access.</string>
+    <string name="library_empty_history">No history yet</string>
+    <string name="library_empty_history_hint">Pages you visit appear here, newest first.</string>
+    <string name="library_clear_history_title">Clear history?</string>
+    <string name="library_clear_history_message">Every page in your history will be removed. This cannot be undone.</string>
+
+    <string name="menu_auto_hide">Hide controls while reading</string>
+    <string name="menu_auto_hide_subtitle">Fade the bar away as you scroll down</string>
+    <string name="menu_immersive">Full screen</string>
+    <string name="menu_immersive_subtitle">Also hide the system bars</string>
+    <string name="menu_incognito">Private browsing</string>
+    <string name="menu_incognito_subtitle">Nothing is shared with your normal window</string>
+    <string name="chrome_private">Private</string>
+
+    <string name="tabs_title">Tabs</string>
+    <string name="tabs_new">New tab</string>
+    <string name="tabs_close">Close tab</string>
+    <string name="tabs_blank">New tab</string>
+    <plurals name="tabs_count">
+        <item quantity="one">%1$d open tab</item>
+        <item quantity="other">%1$d open tabs</item>
+    </plurals>
+    <string name="menu_dynamic_color">Use wallpaper colours</string>
+    <string name="menu_dynamic_color_subtitle">Material palette from your wallpaper</string>
+</resources>

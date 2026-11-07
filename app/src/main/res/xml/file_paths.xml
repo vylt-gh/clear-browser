@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Paths the FileProvider may hand out URIs for.
+
+  `camera-captures/` lives in the cache directory on purpose. A photo taken for
+  `<input type="file" capture>` is handed straight to the page, which will
+  typically upload it, and it is not something the user asked us to keep. The
+  cache is the one directory the system is entitled to reclaim, so a capture the
+  user abandoned cannot sit in permanent storage forever.
+-->
+<paths>
+    <cache-path
+        name="camera-captures"
+        path="camera-captures/" />
+</paths>

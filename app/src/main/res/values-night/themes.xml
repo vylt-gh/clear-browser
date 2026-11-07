@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      Dark counterpart of Theme.ClearBrowser. Present purely so that
+      `isLightTheme` is false in dark mode, which is what makes WebView report
+      `prefers-color-scheme: dark` to sites.
+    -->
+    <!--
+      The contrast-enforcement flags are API 29+. Below that they are simply
+      absent, which is the desired behaviour: the platform did not draw a scrim
+      in the first place, and the bars are transparent regardless.
+    -->
+    <style name="Theme.ClearBrowser" parent="android:Theme.Material.NoActionBar" tools:targetApi="29">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>
