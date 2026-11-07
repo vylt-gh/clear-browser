@@ -30,7 +30,9 @@ class GeckoViewEngine(
     private val runtime: GeckoRuntime = ClearGeckoRuntime.get(context),
 ) : Engine {
 
-    private val geckoView = GeckoView(context)
+    private val geckoView = GeckoView(context).apply {
+        setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW)
+    }
     private val session: GeckoSession
 
     private var container: WebContainer? = null

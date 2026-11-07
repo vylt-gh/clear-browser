@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.PixelCopy
 import android.view.SurfaceView
+import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 
@@ -40,51 +41,73 @@ class TopBarSampler(
         if (!force && url == lastSampledUrl) return
         if (isSampling) return
 
-        val surfaceView = findSurfaceView(root) ?: return
-        val surface = surfaceView.holder.surface
-        if (surface == null || !surface.isValid) return
-        val width = surfaceView.width
-        val height = surfaceView.height
+        val renderView = findRenderView(root) ?: return
+        val width = renderView.width
+        val height = renderView.height
         if (width <= 0 || height <= 0) return
 
         isSampling = true
-
-        // Sample top 24 pixels of the webpage
         val sampleHeight = 24.coerceAtMost(height)
-        val bmp = Bitmap.createBitmap(width, sampleHeight, Bitmap.Config.ARGB_8888)
-        val srcRect = Rect(0, 0, width, sampleHeight)
 
-        try {
-            PixelCopy.request(
-                surfaceView,
-                srcRect,
-                bmp,
-                { result ->
-                    isSampling = false
-                    try {
-                        if (result == PixelCopy.SUCCESS) {
-                            val analysis = analyzeTopBarColor(bmp)
-                            if (analysis != null) {
-                                lastSampledUrl = url
-                                onColorSampled(analysis.color, analysis.isLight)
-                            }
-                        }
-                    } finally {
-                        bmp.recycle()
+        if (renderView is TextureView) {
+            try {
+                val bmp = renderView.getBitmap(width, sampleHeight)
+                isSampling = false
+                if (bmp != null) {
+                    val analysis = analyzeTopBarColor(bmp)
+                    if (analysis != null) {
+                        lastSampledUrl = url
+                        onColorSampled(analysis.color, analysis.isLight)
                     }
-                },
-                mainHandler,
-            )
-        } catch (_: Throwable) {
-            isSampling = false
+                    bmp.recycle()
+                }
+            } catch (_: Throwable) {
+                isSampling = false
+            }
+            return
+        }
+
+        if (renderView is SurfaceView) {
+            val surface = renderView.holder.surface
+            if (surface == null || !surface.isValid) {
+                isSampling = false
+                return
+            }
+            val bmp = Bitmap.createBitmap(width, sampleHeight, Bitmap.Config.ARGB_8888)
+            val srcRect = Rect(0, 0, width, sampleHeight)
+
+            try {
+                PixelCopy.request(
+                    renderView,
+                    srcRect,
+                    bmp,
+                    { result ->
+                        isSampling = false
+                        try {
+                            if (result == PixelCopy.SUCCESS) {
+                                val analysis = analyzeTopBarColor(bmp)
+                                if (analysis != null) {
+                                    lastSampledUrl = url
+                                    onColorSampled(analysis.color, analysis.isLight)
+                                }
+                            }
+                        } finally {
+                            bmp.recycle()
+                        }
+                    },
+                    mainHandler,
+                )
+            } catch (_: Throwable) {
+                isSampling = false
+            }
         }
     }
 
-    private fun findSurfaceView(view: View): SurfaceView? {
-        if (view is SurfaceView) return view
+    private fun findRenderView(view: View): View? {
+        if (view is SurfaceView || view is TextureView) return view
         if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
-                val found = findSurfaceView(view.getChildAt(i))
+                val found = findRenderView(view.getChildAt(i))
                 if (found != null) return found
             }
         }

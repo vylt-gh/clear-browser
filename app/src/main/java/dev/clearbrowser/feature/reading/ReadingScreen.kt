@@ -29,6 +29,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import dev.clearbrowser.JsDialogHost
 import dev.clearbrowser.core.data.ChromePosition
 import dev.clearbrowser.core.engine.WebContainer
@@ -88,6 +91,7 @@ fun ReadingScreen(
 
     // The status bar height, used to place web content below the status bar.
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val hazeState = rememberHazeState()
 
     ClearBrowserTheme(
         isDark = isDark,
@@ -105,6 +109,7 @@ fun ReadingScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = statusBarTop)
+                    .hazeSource(hazeState)
                     .testTag("web-content"),
                 update = { holder -> attachEngine(holder) },
             )
@@ -125,13 +130,6 @@ fun ReadingScreen(
                     .align(Alignment.TopCenter),
             )
 
-            // No scrim over the top of the page any more. The engine insets its
-            // content below the status bar, so the strip is the page's own flat
-            // colour rather than a live page header, and the status bar icons are
-            // chosen to contrast with it. A gradient on top of that would darken
-            // a colour that is already correct and reintroduce the "band" the
-            // inset exists to remove.
-
             // The start page is an overlay rather than a replacement, because
             // the WebView has to stay in the tree: detaching it would take the
             // engine's view out of the hierarchy it was handed, and this
@@ -143,7 +141,9 @@ fun ReadingScreen(
                 enter = fadeIn(chromeFadeSpec()),
                 exit = fadeOut(chromeFadeSpec()),
             ) {
-                StartPage()
+                StartPage(
+                    modifier = Modifier.hazeSource(hazeState),
+                )
             }
 
             if (state.chromeMode == ChromeMode.EXPANDED) {
@@ -161,6 +161,7 @@ fun ReadingScreen(
 
             ChromeSurface(
                 state = state,
+                hazeState = hazeState,
                 onBack = onBack,
                 onReload = onReload,
                 onStop = onStop,
