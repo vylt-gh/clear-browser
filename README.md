@@ -6,12 +6,13 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat&logo=android&logoColor=white" alt="Platform: Android" />
+  <img src="https://img.shields.io/badge/Release-v0.3.0-blue?style=flat&logo=github" alt="Release: v0.3.0" />
   <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=kotlin&logoColor=white" alt="Kotlin 2.3.20" />
   <img src="https://img.shields.io/badge/Engine-Mozilla%20GeckoView-FF7139?style=flat&logo=firefox&logoColor=white" alt="Engine: Mozilla GeckoView" />
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-73%20passing-success" alt="Tests: 73 passing" />
+  <img src="https://img.shields.io/badge/Tests-77%20passing-success" alt="Tests: 77 passing" />
 </p>
 
 ---
@@ -64,6 +65,18 @@ The web page is the content; the chrome is just the tool. When you scroll to rea
 - **Dynamic Theming**: Full Material 3 Expressive theming supporting dynamic wallpaper color extraction (Material You) and system Dark/Light themes.
 - **Immersive Mode**: Fullscreen mode option to hide both system navigation and status bars for distraction-free reading.
 
+### Adaptive Top Bar & Notch Integration
+- **Dominant Header Color Extraction**: On page load, `TopBarSampler` clusters and quantizes the top region of the webpage using 5-bit color buckets. If a dominant color accounts for $\ge 50\%$ of the header (like Hacker News orange), that exact shade is chosen; otherwise, a weighted average RGB is computed.
+- **Seamless Status Bar Extension**: The Android status bar area is filled with the sampled website color, blending seamlessly into the website's navigation header.
+- **Notch & Cutout Safe Area**: Web content begins cleanly below the status bar, guaranteeing fixed headers, hamburger menus, and search bars are never obscured by the camera cutout or system clock.
+- **Dynamic Status Bar Icon Contrast**: Relative luminance calculation ($L > 0.45$) dynamically toggles light or dark status bar icons (clock, battery, wifi) to maximize readability against any website's color palette.
+- **Zero Scroll Overhead**: Sampled once on page load and locked for the duration of the page. Scrolling is 100% free of layout re-calculations, pixel copies, or compositor delays.
+
+### Frosted Glass Aesthetics
+- **Seamless Acrylic Styling**: Both the collapsed omnibox pill and the live search suggestions card share a cohesive frosted glass design language with multi-stop vertical acrylic gradients.
+- **Specular Rim Highlights**: Gradient specular top rim catch borders reflect light naturally while subtle ambient and spot depth shadows elevate floating controls above the page.
+- **Hairline Dividers**: Search suggestions are separated by subtle, translucent hairlines rather than opaque separator blocks.
+
 ### Privacy & Incognito
 - **Context-Isolated Private Sessions**: Independent memory-only context IDs via GeckoView's private browsing architecture. Cookies, storage, and history are never written to disk.
 - **Zero Disk Footprint in Incognito**: Session persistence, download history, and visit logs are completely bypassed in private mode.
@@ -114,6 +127,7 @@ flowchart TD
         GVE[GeckoViewEngine - Engine Implementation]
         CGR[ClearGeckoRuntime - Singleton Manager]
         uBO["uBlock Origin MV2 (Built-in Extension)"]
+        TBS[TopBarSampler - Dominant Color Extraction]
         CR[ChromeReservations - Touch Hit Bounds]
     end
 
@@ -166,7 +180,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 73 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 77 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records
