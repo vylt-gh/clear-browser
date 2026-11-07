@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.clearbrowser.JsDialogHost
@@ -88,13 +90,22 @@ fun ReadingScreen(
     onIncognitoChange: (Boolean) -> Unit,
     onDismissJsDialog: () -> Unit,
     onOmniboxQueryChange: (String) -> Unit = {},
+    onStatusBarHeightChange: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
     LaunchedEffect(isDark) { onSystemDarkChange(isDark) }
 
+    val density = LocalDensity.current
     // The status bar height, used to inset the page while it is at the top.
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarTopPx = with(density) { statusBarTop.roundToPx() }
+
+    LaunchedEffect(statusBarTopPx) {
+        onStatusBarHeightChange(statusBarTopPx)
+    }
+
+    val topInsetDp = with(density) { state.topInsetPx.toDp() }
 
     ClearBrowserTheme(
         isDark = isDark,
@@ -106,8 +117,9 @@ fun ReadingScreen(
                 .background(MaterialTheme.colorScheme.surface),
         ) {
             // Extruded top bar strip: extends the website's top row of pixels
-            // seamlessly into the Android status bar area.
-            if (!state.isStartPage && statusBarTop > 0.dp) {
+            // seamlessly into the Android status bar area at the top of the page,
+            // shortening as the user scrolls down so it feels like part of the document.
+            if (!state.isStartPage && state.topInsetPx > 0) {
                 state.topBarBitmap?.let { bmp ->
                     Image(
                         bitmap = bmp.asImageBitmap(),
@@ -115,19 +127,19 @@ fun ReadingScreen(
                         contentScale = ContentScale.FillBounds,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(statusBarTop)
+                            .height(topInsetDp)
                             .align(Alignment.TopCenter),
                     )
                 }
             }
 
-            // Web content starts directly below the status bar, keeping
-            // all interactive website navigation, titles, and menus fully reachable.
+            // Web content starts directly below the extruded strip at the top of the page,
+            // and moves up smoothly as the user scrolls down.
             AndroidView(
                 factory = { context -> WebContainer(context) },
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = statusBarTop)
+                    .offset { IntOffset(0, state.topInsetPx) }
                     .testTag("web-content"),
                 update = { holder -> attachEngine(holder) },
             )

@@ -53,8 +53,11 @@ class TopBarSampler(
                 { result ->
                     isSampling = false
                     if (result == PixelCopy.SUCCESS) {
-                        val isLight = isBitmapLight(bmp)
-                        onSample(bmp, isLight)
+                        val centerPixel = bmp.getPixel(width / 2, 0)
+                        if (Color.alpha(centerPixel) > 0) {
+                            val isLight = isBitmapLight(bmp)
+                            onSample(bmp, isLight)
+                        }
                     }
                 },
                 mainHandler,

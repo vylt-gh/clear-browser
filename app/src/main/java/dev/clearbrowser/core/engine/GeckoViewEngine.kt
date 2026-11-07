@@ -129,7 +129,9 @@ class GeckoViewEngine(
 
             override fun onPageStop(session: GeckoSession, success: Boolean) {
                 listener.onLoadStateChanged(LoadState.COMPLETE)
-                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 100)
+                topBarSampler.sample(geckoView)
+                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 150)
+                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 400)
             }
 
             override fun onProgressChange(session: GeckoSession, progress: Int) {
@@ -158,6 +160,12 @@ class GeckoViewEngine(
                 listener.onLoadStateChanged(LoadState.COMMITTED)
                 listener.onPageCommitted(currentUrlString.orEmpty())
                 mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 50)
+            }
+
+            override fun onFirstContentfulPaint(session: GeckoSession) {
+                topBarSampler.sample(geckoView)
+                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 200)
+                mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 500)
             }
 
             override fun onCrash(session: GeckoSession) {
@@ -207,7 +215,11 @@ class GeckoViewEngine(
                         canScrollDown = canDown,
                         userTouchActive = isUser,
                     )
-                    topBarSampler.sample(geckoView)
+                    // Only sample at the very top of the document.
+                    // Never sample while scrolling down through page content so text is never stretched.
+                    if (scrollY <= 4) {
+                        topBarSampler.sample(geckoView)
+                    }
                 }
             }
         }
@@ -349,7 +361,7 @@ class GeckoViewEngine(
             ),
         )
         geckoView.setSession(session)
-        mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 100)
+        mainHandler.postDelayed({ topBarSampler.sample(geckoView) }, 200)
     }
 
     override fun detach() {

@@ -74,6 +74,8 @@ data class ReadingUiState(
     val topBarBitmap: android.graphics.Bitmap? = null,
     /** Whether the webpage top background is light, for status bar icon contrast. */
     val isTopBarLight: Boolean = true,
+    /** Dynamic top inset in pixels that smoothly shortens as the page scrolls down. */
+    val topInsetPx: Int = 0,
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -1057,6 +1059,26 @@ class ReadingViewModel(
         }
     }
 
+    private var statusBarHeightPx: Int = 0
+
+    fun setStatusBarHeightPx(heightPx: Int) {
+        if (statusBarHeightPx == heightPx) return
+        statusBarHeightPx = heightPx
+        val currentScroll = engineForActive()?.currentScrollY() ?: 0
+        updateTopInset(currentScroll)
+    }
+
+    private fun updateTopInset(scrollY: Int) {
+        val inset = if (_state.value.isStartPage || statusBarHeightPx <= 0) {
+            0
+        } else {
+            (statusBarHeightPx - scrollY).coerceIn(0, statusBarHeightPx)
+        }
+        if (inset != _state.value.topInsetPx) {
+            _state.value = _state.value.copy(topInsetPx = inset)
+        }
+    }
+
     private fun onActiveScroll(
         tabId: Long,
         scrollY: Int,
@@ -1066,6 +1088,8 @@ class ReadingViewModel(
     ) {
         lastHeight[tabId] = max(lastHeight[tabId] ?: 0, scrollY + VIEWPORT_ESTIMATE_PX)
         if ((pendingScroll[tabId] ?: 0) > 0) tryApplyPendingScroll(tabId)
+
+        updateTopInset(scrollY)
 
         val atTop = scrollY <= AT_TOP_SLOP_PX
         if (atTop != _state.value.scrollAtTop) {

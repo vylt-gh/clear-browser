@@ -162,8 +162,14 @@ class MainActivity : ComponentActivity() {
         applyImmersive(state.settings.immersiveMode)
 
         val isDark = isSystemInDarkTheme()
-        LaunchedEffect(state.isTopBarLight, state.isStartPage, isDark) {
-            val lightBackground = if (state.isStartPage) !isDark else state.isTopBarLight
+        LaunchedEffect(state.isTopBarLight, state.isStartPage, isDark, state.topInsetPx) {
+            val lightBackground = if (state.isStartPage) {
+                !isDark
+            } else if (state.topInsetPx > 0) {
+                state.isTopBarLight
+            } else {
+                !isDark
+            }
             applyStatusBarIcons(isLight = lightBackground)
         }
 
@@ -230,6 +236,7 @@ class MainActivity : ComponentActivity() {
             onIncognitoChange = viewModel::setIncognito,
             onDismissJsDialog = viewModel::dismissJsDialog,
             onOmniboxQueryChange = viewModel::onOmniboxQueryChanged,
+            onStatusBarHeightChange = viewModel::setStatusBarHeightPx,
         )
     }
 
