@@ -93,6 +93,12 @@ class ScrollIntentDetector(
         }
 
         if (observed != pendingDirection) {
+            val absDelta = kotlin.math.abs(delta)
+            if (accumulated > 0 && absDelta < accumulated) {
+                // Absorb minor counter-movement (micro-jitter) rather than discarding all accumulated progress
+                accumulated -= absDelta
+                return Direction.NONE
+            }
             pendingDirection = observed
             accumulated = 0
         }

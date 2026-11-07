@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -211,7 +213,26 @@ fun ChromeSurface(
                     .height(HANDLE_SIZE)
                     .graphicsLayer { translationX = currentOffset.toPx() }
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.88f),
+                                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.78f),
+                            )
+                        )
+                    )
+                    .border(
+                        BorderStroke(
+                            1.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
+                                )
+                            ),
+                        ),
+                        CircleShape,
+                    )
                     .onGloballyPositioned { coords ->
                         val window = coords.boundsInWindow()
                         bounds.set(window.left, window.top, window.right, window.bottom)
@@ -320,7 +341,14 @@ private fun CompactBar(
                 modifier = Modifier
                     .weight(1f)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f))
+                    .border(
+                        BorderStroke(
+                            0.75.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        ),
+                        CircleShape,
+                    )
                     .height(44.dp)
                     // Tapping the address is the primary way into the
                     // browser's own UI, so it has to be the most
@@ -491,10 +519,18 @@ private fun SuggestionsCard(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.90f),
         tonalElevation = 3.dp,
-        shadowElevation = 6.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        shadowElevation = 8.dp,
+        border = BorderStroke(
+            1.dp,
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f),
+                )
+            ),
+        ),
     ) {
         LazyColumn(
             modifier = Modifier

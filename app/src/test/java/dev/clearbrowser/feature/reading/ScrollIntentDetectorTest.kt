@@ -95,6 +95,31 @@ class ScrollIntentDetectorTest {
     }
 
     @Test
+    fun `slow downward scroll with micro-jitters accumulates and triggers DOWN`() {
+        val detector = ScrollIntentDetector(thresholdPx = 48)
+        detector.onScroll(100, canScrollUp = true, canScrollDown = true)
+
+        // Scroll down slowly with occasional 1px sensor jitter backwards: +3, -1, +3, -1...
+        var currentY = 100
+        var triggeredDown = false
+        for (i in 0 until 40) {
+            currentY += 3
+            var res = detector.onScroll(currentY, canScrollUp = true, canScrollDown = true)
+            if (res == ScrollIntentDetector.Direction.DOWN) {
+                triggeredDown = true
+                break
+            }
+            currentY -= 1
+            res = detector.onScroll(currentY, canScrollUp = true, canScrollDown = true)
+            if (res == ScrollIntentDetector.Direction.DOWN) {
+                triggeredDown = true
+                break
+            }
+        }
+        assertEquals("Down should be triggered despite 1px backward jitters", true, triggeredDown)
+    }
+
+    @Test
     fun `reset clears all state`() {
         val detector = ScrollIntentDetector(thresholdPx = 48)
         detector.onScroll(500, canScrollUp = true, canScrollDown = true)

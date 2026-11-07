@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-72%20passing-success" alt="Tests: 72 passing" />
+  <img src="https://img.shields.io/badge/Tests-73%20passing-success" alt="Tests: 73 passing" />
 </p>
 
 ---
@@ -166,7 +166,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 72 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 73 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records

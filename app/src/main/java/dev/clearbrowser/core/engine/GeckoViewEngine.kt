@@ -190,7 +190,7 @@ class GeckoViewEngine(
 
         session.compositorScrollDelegate = object : GeckoSession.CompositorScrollDelegate {
             override fun onScrollChanged(session: GeckoSession, update: GeckoSession.ScrollPositionUpdate) {
-                val scrollY = (update.scrollY * update.zoom).toInt()
+                val scrollY = (update.scrollY * update.zoom).toInt().coerceAtLeast(0)
                 currentScrollYPos = scrollY
                 val canUp = scrollY > 0
                 val canDown = geckoView.canScrollVertically(1)
@@ -203,20 +203,6 @@ class GeckoViewEngine(
                         userTouchActive = isUser,
                     )
                 }
-            }
-        }
-
-        session.scrollDelegate = object : GeckoSession.ScrollDelegate {
-            override fun onScrollChanged(session: GeckoSession, scrollX: Int, scrollY: Int) {
-                currentScrollYPos = scrollY
-                val canUp = scrollY > 0
-                val canDown = geckoView.canScrollVertically(1)
-                listener.onScrollChanged(
-                    scrollY = scrollY,
-                    canScrollUp = canUp,
-                    canScrollDown = canDown,
-                    userTouchActive = userTouchActive,
-                )
             }
         }
 
