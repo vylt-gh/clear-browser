@@ -78,10 +78,6 @@ import dev.clearbrowser.core.data.ChromePosition
 import dev.clearbrowser.core.data.SearchSuggestion
 import dev.clearbrowser.core.theme.chromeFadeSpec
 import dev.clearbrowser.core.theme.chromeMorphSpring
-import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.blur.HazeBlurStyle
-import dev.chrisbanes.haze.blur.hazeBlur
 
 /**
  * The chrome, as one continuous surface.
@@ -120,7 +116,6 @@ import dev.chrisbanes.haze.blur.hazeBlur
 @Composable
 fun ChromeSurface(
     state: ReadingUiState,
-    hazeState: HazeState,
     onBack: () -> Unit,
     onReload: () -> Unit,
     onStop: () -> Unit,
@@ -191,12 +186,6 @@ fun ChromeSurface(
 
         val isDark = isSystemInDarkTheme()
         val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
-        val hazeBlurStyle = remember {
-            HazeBlurStyle {
-                blurRadius(24.dp)
-                noiseFactor(0.10f)
-            }
-        }
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -209,7 +198,6 @@ fun ChromeSurface(
             ) {
                 SuggestionsCard(
                     suggestions = state.searchSuggestions,
-                    hazeState = hazeState,
                     onSelect = { suggestion ->
                         onNavigate(suggestion.destination)
                         onCollapseOmnibox()
@@ -236,10 +224,6 @@ fun ChromeSurface(
                         ambientColor = if (isDark) Color.Black.copy(alpha = 0.35f) else Color(0x15000000),
                     )
                     .clip(CircleShape)
-                    .hazeBlur(
-                        input = HazeInput.Sources(hazeState),
-                        style = hazeBlurStyle,
-                    )
                     .background(frostedBackground)
                     .border(BorderStroke(1.dp, frostedBorder), CircleShape)
                     .onGloballyPositioned { coords ->
@@ -527,17 +511,17 @@ private fun rememberFrostedGlassBrushes(isDark: Boolean): Pair<Brush, Brush> {
         val background = if (isDark) {
             Brush.verticalGradient(
                 listOf(
-                    Color(0x99282A3A), // Translucent acrylic top highlight
-                    Color(0x751A1C29), // Translucent frosted body
-                    Color(0x6012131F), // Deeper translucent base
+                    Color(0xD8272938), // Translucent acrylic top highlight
+                    Color(0xB51A1C29), // Translucent body
+                    Color(0x9E12131F), // Deeper base
                 )
             )
         } else {
             Brush.verticalGradient(
                 listOf(
-                    Color(0xBBFFFFFF), // Luminous specular white catch
-                    Color(0x95F0F4FA), // Frosted translucent body
-                    Color(0x80DFE5F0), // Cool tinted base
+                    Color(0xF2FFFFFF), // Bright specular white catch
+                    Color(0xD4F0F4FA), // Frosted translucent body
+                    Color(0xBCDFE5F0), // Cool tinted base
                 )
             )
         }
@@ -545,17 +529,17 @@ private fun rememberFrostedGlassBrushes(isDark: Boolean): Pair<Brush, Brush> {
         val border = if (isDark) {
             Brush.verticalGradient(
                 listOf(
-                    Color.White.copy(alpha = 0.40f), // Specular rim reflection
-                    Color.White.copy(alpha = 0.15f),
-                    Color.White.copy(alpha = 0.05f), // Soft base rim
+                    Color.White.copy(alpha = 0.36f), // Specular rim reflection
+                    Color.White.copy(alpha = 0.12f),
+                    Color.White.copy(alpha = 0.04f), // Soft base rim
                 )
             )
         } else {
             Brush.verticalGradient(
                 listOf(
                     Color.White.copy(alpha = 0.95f), // Specular highlight
-                    Color(0x40000000),               // Crisp edge definition
-                    Color(0x18000000),
+                    Color(0x35000000),               // Crisp edge definition
+                    Color(0x12000000),
                 )
             )
         }
@@ -567,7 +551,6 @@ private fun rememberFrostedGlassBrushes(isDark: Boolean): Pair<Brush, Brush> {
 @Composable
 private fun SuggestionsCard(
     suggestions: List<SearchSuggestion>,
-    hazeState: HazeState,
     onSelect: (SearchSuggestion) -> Unit,
     onInsert: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -575,12 +558,6 @@ private fun SuggestionsCard(
     val isDark = isSystemInDarkTheme()
     val shape = RoundedCornerShape(24.dp)
     val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
-    val hazeBlurStyle = remember {
-        HazeBlurStyle {
-            blurRadius(24.dp)
-            noiseFactor(0.10f)
-        }
-    }
 
     Box(
         modifier = modifier
@@ -591,10 +568,6 @@ private fun SuggestionsCard(
                 ambientColor = if (isDark) Color.Black.copy(alpha = 0.40f) else Color(0x18000000),
             )
             .clip(shape)
-            .hazeBlur(
-                input = HazeInput.Sources(hazeState),
-                style = hazeBlurStyle,
-            )
             .background(frostedBackground)
             .border(BorderStroke(1.dp, frostedBorder), shape),
     ) {
