@@ -141,50 +141,6 @@ class WebViewEngine(
      * fallback, because it knows the RFC 6266 details (encoded `filename*`,
      * relative paths) better than a hand-rolled parser would.
      */
-    private fun resolveDownloadFilename(
-        url: String,
-        contentDisposition: String?,
-        mimeType: String?,
-    ): String {
-        val fromDisposition = parseDispositionFilename(contentDisposition)
-        if (!fromDisposition.isNullOrBlank()) return fromDisposition
-        return URLUtil.guessFileName(url, contentDisposition, mimeType)
-    }
-
-    /**
-     * Pull a filename out of a `Content-Disposition` header, if it has one.
-     *
-     * Handles `filename="x"`, `filename=x`, and the RFC 5987 `filename*=UTF-8''x`
-     * form, which is what non-ASCII names actually arrive as. The path is
-     * stripped, since a server sending `../../etc/passwd` must not be believed.
-     */
-    private fun parseDispositionFilename(contentDisposition: String?): String? {
-        val header = contentDisposition?.takeIf { it.isNotBlank() } ?: return null
-        // `filename*` first: it is the authoritative form and would otherwise be
-        // masked by the plain `filename` parameter.
-        header.split(';').forEach { part ->
-            val param = part.trim()
-            if (param.startsWith(EXTENDED, ignoreCase = true)) {
-                val value = param.substringAfter("''", "").trim()
-                if (value.isNotBlank()) {
-                    val decoded = runCatching { URLDecoder.decode(value, "UTF-8") }
-                        .getOrDefault(value)
-                    val name = decoded.substringAfterLast('/').substringAfterLast('\\')
-                    if (name.isNotBlank()) return name
-                }
-            }
-        }
-        header.split(';').forEach { part ->
-            val param = part.trim()
-            if (param.startsWith(PLAIN, ignoreCase = true)) {
-                val value = param.substringAfter('=', "").trim().trim('"').trim('\'')
-                val name = value.substringAfterLast('/').substringAfterLast('\\')
-                if (name.isNotBlank()) return name
-            }
-        }
-        return null
-    }
-
     private fun installDownloadListener() {
         webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
             host.startDownload(
@@ -194,7 +150,7 @@ class WebViewEngine(
                     contentDisposition = contentDisposition,
                     mimeType = mimeType,
                     contentLength = contentLength,
-                    suggestedFilename = resolveDownloadFilename(url, contentDisposition, mimeType),
+                    suggestedFilename = DownloadFilenameResolver.resolve(url, contentDisposition, mimeType),
                 ),
             )
         }

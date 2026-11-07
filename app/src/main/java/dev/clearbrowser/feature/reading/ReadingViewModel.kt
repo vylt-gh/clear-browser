@@ -19,6 +19,7 @@ import dev.clearbrowser.core.data.resolveAddress
 import dev.clearbrowser.core.engine.BrowserProfile
 import dev.clearbrowser.core.engine.Engine
 import dev.clearbrowser.core.engine.EngineListener
+import dev.clearbrowser.core.engine.GeckoViewEngine
 import dev.clearbrowser.core.engine.LoadState
 import dev.clearbrowser.core.engine.WebViewEngine
 import kotlinx.coroutines.delay
@@ -511,7 +512,7 @@ class ReadingViewModel(
         val activity = hostActivity ?: return null
         val browserHost = host ?: return null
 
-        val engine = WebViewEngine(
+        val engine = GeckoViewEngine(
             activity,
             TabListener(tab.id, engineProfile.isIncognito),
             browserHost,

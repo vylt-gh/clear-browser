@@ -7,15 +7,16 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat&logo=android&logoColor=white" alt="Platform: Android" />
   <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=kotlin&logoColor=white" alt="Kotlin 2.3.20" />
+  <img src="https://img.shields.io/badge/Engine-Mozilla%20GeckoView-FF7139?style=flat&logo=firefox&logoColor=white" alt="Engine: Mozilla GeckoView" />
+  <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
-  <img src="https://img.shields.io/badge/compileSdk-37-informational" alt="compileSdk 37" />
-  <img src="https://img.shields.io/badge/targetSdk-36-informational" alt="targetSdk 36" />
-  <img src="https://img.shields.io/badge/Tests-64%20passing-success" alt="Tests: 64 passing" />
+  <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
+  <img src="https://img.shields.io/badge/Tests-72%20passing-success" alt="Tests: 72 passing" />
 </p>
 
 ---
 
-**Clear** is an uncluttered, reading-first web browser for Android. Built from the ground up using **Kotlin**, **Jetpack Compose**, and **Material 3 Expressive**, Clear removes news feeds, sponsored suggestions, and unnecessary toolbar clutter. 
+**Clear** is an uncluttered, reading-first web browser for Android. Built with **Kotlin**, **Jetpack Compose**, **Material 3 Expressive**, and powered by **Mozilla GeckoView**, Clear bundles **uBlock Origin Manifest V2 (MV2)** to eliminate ads, trackers, and page clutter before they ever reach your screen.
 
 The web page is the content; the chrome is just the tool. When you scroll to read, the interface gracefully retreats into a minimal handle. When you need it, one tap or upward flick brings back full navigation.
 
@@ -51,15 +52,20 @@ The web page is the content; the chrome is just the tool. When you scroll to rea
 
 ## Features
 
+### Built-in Desktop-Grade Adblocking
+- **uBlock Origin Manifest V2 (MV2)**: Pre-bundled and active out of the box (`uBlock0@raymondhill.net`). Blocks network requests, third-party trackers, and intrusive ad-tech scripts before bytes ever hit your device.
+- **Enhanced Tracking Protection (ETP Strict)**: Native Gecko anti-tracking, query parameter stripping, and automatic third-party cookie purging.
+- **Enabled in Private Browsing**: Full content blocking protection extends across both regular and private browsing sessions.
+
 ### Minimalist & Responsive Interface
 - **Unified Morphing Surface**: Rather than jarringly animating separate toolbars and buttons, the omnibox dynamically morphs into an unobtrusive reveal handle and back using physics-based spring animations (`Motion.kt`).
 - **Customizable Handle Position**: Dock the collapsed reveal handle to the **Left**, **Center**, or **Right** of the screen so it never covers in-page elements, chat widgets, or cookie banners.
-- **Smart Edge-to-Edge Insets**: Automatically adjusts top-status bar insets. While at the top of a page, `position: fixed` navigation headers remain fully visible and clickable; on scroll, the page extends smoothly into edge-to-edge transparent status bars.
+- **Full-Bleed Viewport**: Inset-free web view eliminates layout re-calculation jitter during scrolling, locking to a smooth 120fps display pipeline.
 - **Dynamic Theming**: Full Material 3 Expressive theming supporting dynamic wallpaper color extraction (Material You) and system Dark/Light themes.
 - **Immersive Mode**: Fullscreen mode option to hide both system navigation and status bars for distraction-free reading.
 
 ### Privacy & Incognito
-- **OS-Level Multi-Profile Isolation**: Independent cookie jars and network caches via AndroidX WebKit profile separation.
+- **Context-Isolated Private Sessions**: Independent memory-only context IDs via GeckoView's private browsing architecture. Cookies, storage, and history are never written to disk.
 - **Zero Disk Footprint in Incognito**: Session persistence, download history, and visit logs are completely bypassed in private mode.
 - **Subtle Privacy Indicator**: An unobtrusive Material `VisibilityOff` glyph in the address bar confirms private mode without consuming horizontal bar space.
 - **Lifecycle Resilience**: Private mode survives Activity configuration changes (screen rotations, font changes) without leaking tabs to the standard profile, but resets completely on application finish.
@@ -67,9 +73,10 @@ The web page is the content; the chrome is just the tool. When you scroll to rea
 ### Efficient Tab Strip
 - **Lazy Engine Allocation**: Tabs restored from previous sessions remain URLs until activated, saving memory and startup latency.
 - **Tab Strip Management**: Fast bottom sheet with open tab counts, active tab indicators, single-tap switching, and per-tab closing.
-- **Persistent Sessions**: Active tabs and scroll offsets are saved atomically to `session/last.json` on app backgrounding, with state bundles preserved across process death.
+- **Persistent Sessions**: Active tabs, history state, and scroll offsets are saved atomically on app backgrounding, with state bundles preserved across process death.
 
 ### Search & Navigation
+- **Live Search Suggestions**: Instant debounced query suggestions with local bookmark and history matching. Easily append suggestions directly into the omnibox via `↖`.
 - **Kagi by Default**: Ships with privacy-first [Kagi](https://kagi.com) search out of the box, with one-tap configuration for **DuckDuckGo**, **Brave Search**, **Startpage**, **Mojeek**, **Ecosia**, **Google**, and **Bing**.
 - **Smart Omnibox Parsing**: Automatic distinction between search queries, IP addresses, `localhost`, and full/short domain names (`Address.kt`).
 - **Desktop Site Toggle**: Switch user-agent string per session to request desktop layouts.
@@ -80,7 +87,8 @@ The web page is the content; the chrome is just the tool. When you scroll to rea
 - **Atomic Disk Storage**: Thread-safe, non-blocking disk persistence using temporary files and atomic renames (`AtomicJsonFile.kt`) preventing state corruption.
 
 ### Web Engine Integration
-- **Modern Web Permissions**: Clean runtime permission negotiation for Camera, Microphone (`AUDIO_CAPTURE`), and Location (`ACCESS_FINE_LOCATION`).
+- **Mozilla GeckoView Backend**: Robust, modern Gecko web rendering engine with WebRender hardware compositing.
+- **Modern Web Permissions**: Clean runtime permission negotiation for Camera, Microphone, and Location.
 - **Secure File Uploads**: Android `FileProvider` integration for seamless in-browser file uploads and image captures.
 - **Native JavaScript Dialogs**: Custom Material 3 Compose host for JavaScript `alert`, `confirm`, and `prompt` dialogs.
 - **RFC-Compliant Downloads**: Proper download filename resolution supporting RFC 5987 / RFC 6266 (`Content-Disposition: filename*`).
@@ -103,10 +111,10 @@ flowchart TD
 
     subgraph CoreEngine ["Core Engine (core/engine)"]
         WC[WebContainer - Compose AndroidView]
-        WVE[WebViewEngine - Engine Implementation]
-        BP[BrowserProfile - Multi-profile Manager]
+        GVE[GeckoViewEngine - Engine Implementation]
+        CGR[ClearGeckoRuntime - Singleton Manager]
+        uBO["uBlock Origin MV2 (Built-in Extension)"]
         CR[ChromeReservations - Touch Hit Bounds]
-        CP[CookiePolicy]
     end
 
     subgraph CoreData ["Core Data & Storage (core/data)"]
@@ -116,6 +124,7 @@ flowchart TD
         SessStore[SessionStore & AtomicJsonFile]
         SettStore[SettingsStore - SharedPreferences Flow]
         Addr[Address Parser & Search Engines]
+        Sugg[SearchSuggestionsFetcher]
     end
 
     RS --> RVM
@@ -125,9 +134,10 @@ flowchart TD
     LS --> RVM
     RVM --> CoreEngine
     RVM --> CoreData
-    WC --> WVE
-    WVE --> BP
-    WVE --> CR
+    WC --> GVE
+    GVE --> CGR
+    CGR --> uBO
+    GVE --> CR
 ```
 
 ### Performance Highlights
@@ -207,7 +217,8 @@ The output APK is generated at:
 | **Build System** | Gradle / Android Gradle Plugin | 9.8.0 / 9.4.1 |
 | **UI Toolkit** | Jetpack Compose (BOM) | 2026.09.00 |
 | **Design System** | Material 3 Expressive (`material3`) | Latest M3 |
-| **Web Engine** | AndroidX WebKit (`androidx.webkit`) | 1.18.0-alpha02 |
+| **Web Engine** | Mozilla GeckoView (`org.mozilla.geckoview`) | 159.0 |
+| **Adblocker** | uBlock Origin Manifest V2 (MV2) | 1.75.4 |
 | **Architecture** | AndroidX Lifecycle & ViewModel Compose | 2.9.4 |
 | **Unit Testing** | JUnit 4 | 4.13.2 |
 
