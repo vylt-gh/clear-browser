@@ -229,6 +229,7 @@ class MainActivity : ComponentActivity() {
             onImmersiveChange = { viewModel.setImmersive(it) },
             onIncognitoChange = viewModel::setIncognito,
             onDismissJsDialog = viewModel::dismissJsDialog,
+            onOmniboxQueryChange = viewModel::onOmniboxQueryChanged,
         )
     }
 

@@ -67,6 +67,8 @@ data class ReadingUiState(
     val isBookmarked: Boolean = false,
     /** Which half of the library the sheet is showing, while it is up. */
     val libraryTab: LibraryTab? = null,
+    /** Live query suggestions, matching bookmarks, and history entries. */
+    val searchSuggestions: List<dev.clearbrowser.core.data.SearchSuggestion> = emptyList(),
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -146,7 +148,10 @@ class ReadingViewModel(
     private var host: dev.clearbrowser.core.engine.BrowserHost?,
     private val historyStore: HistoryStore? = null,
     private val bookmarkStore: BookmarkStore? = null,
+    private val suggestionsFetcher: dev.clearbrowser.core.data.SearchSuggestionsFetcher = dev.clearbrowser.core.data.DefaultSearchSuggestionsFetcher,
 ) : ViewModel() {
+
+    private var suggestionsJob: kotlinx.coroutines.Job? = null
 
     private val scrollIntent = ScrollIntentDetector()
 
@@ -680,7 +685,12 @@ class ReadingViewModel(
     // ------------------------------------------------------------ user intent
 
     fun navigate(raw: String) {
+        suggestionsJob?.cancel()
         val url = resolveAddress(raw, _state.value.settings.searchEngine) ?: return
+        _state.value = _state.value.copy(
+            chromeMode = ChromeMode.SUMMONED,
+            searchSuggestions = emptyList(),
+        )
         scrollIntent.reset()
         // A fresh tab has no engine yet; this is what creates one for it.
         val engine = ensureActiveEngine() ?: return
@@ -733,10 +743,74 @@ class ReadingViewModel(
 
     fun expandOmnibox() {
         _state.value = _state.value.copy(chromeMode = ChromeMode.EXPANDED)
+        val initialQuery = if (_state.value.isStartPage) "" else _state.value.url
+        onOmniboxQueryChanged(initialQuery)
     }
 
     fun collapseOmnibox() {
-        _state.value = _state.value.copy(chromeMode = ChromeMode.SUMMONED)
+        suggestionsJob?.cancel()
+        _state.value = _state.value.copy(
+            chromeMode = ChromeMode.SUMMONED,
+            searchSuggestions = emptyList(),
+        )
+    }
+
+    fun onOmniboxQueryChanged(query: String) {
+        suggestionsJob?.cancel()
+        val trimmed = query.trim()
+        val isIncognito = _state.value.incognito
+
+        if (trimmed.isEmpty()) {
+            val recentBookmarks = (bookmarkStore?.entries?.value ?: emptyList())
+                .take(3)
+                .map { dev.clearbrowser.core.data.SearchSuggestion.Bookmark(title = it.title.ifBlank { it.url }, url = it.url) }
+
+            val recentHistory = if (!isIncognito) {
+                (historyStore?.entries?.value ?: emptyList())
+                    .filter { h -> recentBookmarks.none { it.url == h.url } }
+                    .take(3)
+                    .map { dev.clearbrowser.core.data.SearchSuggestion.History(title = it.title.ifBlank { it.url }, url = it.url) }
+            } else emptyList()
+
+            _state.value = _state.value.copy(searchSuggestions = recentBookmarks + recentHistory)
+            return
+        }
+
+        val queryLower = trimmed.lowercase()
+        val matchingBookmarks = (bookmarkStore?.entries?.value ?: emptyList())
+            .filter { it.title.lowercase().contains(queryLower) || it.url.lowercase().contains(queryLower) }
+            .take(2)
+            .map { dev.clearbrowser.core.data.SearchSuggestion.Bookmark(title = it.title.ifBlank { it.url }, url = it.url) }
+
+        val matchingHistory = if (!isIncognito) {
+            (historyStore?.entries?.value ?: emptyList())
+                .filter { h ->
+                    matchingBookmarks.none { it.url == h.url } &&
+                        (h.title.lowercase().contains(queryLower) || h.url.lowercase().contains(queryLower))
+                }
+                .take(2)
+                .map { dev.clearbrowser.core.data.SearchSuggestion.History(title = it.title.ifBlank { it.url }, url = it.url) }
+        } else emptyList()
+
+        val localMatches = matchingBookmarks + matchingHistory
+        _state.value = _state.value.copy(searchSuggestions = localMatches)
+
+        val engine = _state.value.settings.searchEngine
+        suggestionsJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(150)
+            val webResults = suggestionsFetcher.fetch(engine, trimmed)
+                .filter { suggestion ->
+                    suggestion.isNotBlank() &&
+                        !suggestion.trim().equals(trimmed, ignoreCase = true) &&
+                        localMatches.none { it.title.equals(suggestion, ignoreCase = true) }
+                }
+                .take(5)
+                .map { dev.clearbrowser.core.data.SearchSuggestion.Query(it) }
+
+            _state.value = _state.value.copy(
+                searchSuggestions = localMatches + webResults,
+            )
+        }
     }
 
     /**
@@ -983,23 +1057,6 @@ class ReadingViewModel(
         lastHeight[tabId] = max(lastHeight[tabId] ?: 0, scrollY + VIEWPORT_ESTIMATE_PX)
         if ((pendingScroll[tabId] ?: 0) > 0) tryApplyPendingScroll(tabId)
 
-        // Two facts pull in opposite directions and cannot both hold at once:
-        //
-        //  - A `position: fixed` header at `top: 0` sits under the status bar,
-        //    and the status bar consumes touches in its own region, so the top
-        //    ~60px of that header is genuinely untappable. Nothing the page does
-        //    can fix this, because it never receives the touch.
-        //  - Insetting the page permanently means the top of every page is
-        //    permanently hidden behind a filled strip, which the user does not
-        //    want: once they scroll, the content is right there and should be
-        //    visible.
-        //
-        // So the inset is applied only while the page is at the top, and
-        // released the moment it is not.
-        //
-        // Guarded so this writes state at most twice per scroll, rather than on
-        // every frame -- the threshold is crossed once on the way in and once on
-        // the way out.
         val atTop = scrollY <= AT_TOP_SLOP_PX
         if (atTop != _state.value.scrollAtTop) {
             _state.value = _state.value.copy(scrollAtTop = atTop)
@@ -1014,6 +1071,7 @@ class ReadingViewModel(
             scrollIntent.reset()
             return
         }
+
         when (scrollIntent.onScroll(scrollY, canScrollUp, canScrollDown)) {
             ScrollIntentDetector.Direction.DOWN -> hideForReading()
             ScrollIntentDetector.Direction.UP -> revealChrome()

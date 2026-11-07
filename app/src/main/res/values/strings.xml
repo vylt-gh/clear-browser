@@ -8,6 +8,7 @@
     <string name="chrome_back">Back</string>
     <string name="chrome_menu">Menu</string>
     <string name="chrome_enter_url">Search with %1$s or enter address</string>
+    <string name="chrome_insert_suggestion">Insert suggestion into search</string>
     <string name="chrome_hide_chrome">Hide browser controls</string>
     <string name="chrome_show_chrome">Show browser controls</string>
 

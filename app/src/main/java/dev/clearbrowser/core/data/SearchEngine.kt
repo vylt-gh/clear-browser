@@ -35,15 +35,52 @@ enum class SearchEngine(
     val label: String,
     /** Query URL with `%s` where the encoded query goes. */
     private val template: String,
+    /**
+     * OpenSearch-compatible suggestion API endpoint with `%s` where the encoded
+     * query goes, or null if the engine does not provide suggestions.
+     */
+    private val suggestTemplate: String? = null,
 ) {
-    KAGI("Kagi", "https://kagi.com/search?q=%s"),
-    DUCKDUCKGO("DuckDuckGo", "https://duckduckgo.com/?q=%s"),
-    BRAVE("Brave Search", "https://search.brave.com/search?q=%s"),
-    STARTPAGE("Startpage", "https://www.startpage.com/sp/search?query=%s"),
-    GOOGLE("Google", "https://www.google.com/search?q=%s"),
-    BING("Bing", "https://www.bing.com/search?q=%s"),
-    ECOSIA("Ecosia", "https://www.ecosia.org/search?q=%s"),
-    MOJEEK("Mojeek", "https://www.mojeek.com/search?q=%s"),
+    KAGI(
+        label = "Kagi",
+        template = "https://kagi.com/search?q=%s",
+        suggestTemplate = "https://kagi.com/api/autosuggest?q=%s",
+    ),
+    DUCKDUCKGO(
+        label = "DuckDuckGo",
+        template = "https://duckduckgo.com/?q=%s",
+        suggestTemplate = "https://duckduckgo.com/ac/?q=%s&type=list",
+    ),
+    BRAVE(
+        label = "Brave Search",
+        template = "https://search.brave.com/search?q=%s",
+        suggestTemplate = "https://search.brave.com/api/suggest?q=%s",
+    ),
+    STARTPAGE(
+        label = "Startpage",
+        template = "https://www.startpage.com/sp/search?query=%s",
+        suggestTemplate = "https://www.startpage.com/osuggestions?q=%s",
+    ),
+    GOOGLE(
+        label = "Google",
+        template = "https://www.google.com/search?q=%s",
+        suggestTemplate = "https://suggestqueries.google.com/complete/search?client=chrome&q=%s",
+    ),
+    BING(
+        label = "Bing",
+        template = "https://api.bing.com/osjson.aspx?query=%s",
+        suggestTemplate = "https://api.bing.com/osjson.aspx?query=%s",
+    ),
+    ECOSIA(
+        label = "Ecosia",
+        template = "https://www.ecosia.org/search?q=%s",
+        suggestTemplate = "https://ac.ecosia.org/?q=%s&type=list",
+    ),
+    MOJEEK(
+        label = "Mojeek",
+        template = "https://www.mojeek.com/search?q=%s",
+        suggestTemplate = null,
+    ),
     ;
 
     /**
@@ -56,6 +93,12 @@ enum class SearchEngine(
      * engine that parses its own input loosely.
      */
     fun searchUrl(query: String): String = template.replace("%s", encode(query))
+
+    /**
+     * The URL that requests OpenSearch completion suggestions for [query],
+     * or null if this engine does not support a suggestions API.
+     */
+    fun suggestUrl(query: String): String? = suggestTemplate?.replace("%s", encode(query))
 
     private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8")
 }

@@ -6,6 +6,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -22,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -81,6 +84,7 @@ fun ReadingScreen(
     onImmersiveChange: (Boolean) -> Unit,
     onIncognitoChange: (Boolean) -> Unit,
     onDismissJsDialog: () -> Unit,
+    onOmniboxQueryChange: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
@@ -133,6 +137,20 @@ fun ReadingScreen(
             ) {
                 StartPage()
             }
+
+            if (state.chromeMode == ChromeMode.EXPANDED) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.28f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onCollapseOmnibox,
+                        ),
+                )
+            }
+
             ChromeSurface(
                 state = state,
                 onBack = onBack,
@@ -145,6 +163,7 @@ fun ReadingScreen(
                 onCollapseOmnibox = onCollapseOmnibox,
                 onReveal = onToggleChrome,
                 onBoundsChanged = onChromeBounds,
+                onQueryChange = onOmniboxQueryChange,
                 // The bottom edge is the whole design: the thumb should not have
                 // to reach past the content to find the controls.
                 modifier = Modifier.align(Alignment.BottomCenter),

@@ -1,33 +1,48 @@
 package dev.clearbrowser.feature.reading
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Close
-
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.NorthWest
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -56,6 +71,8 @@ import androidx.compose.ui.unit.dp
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.BrowserSettings
 import dev.clearbrowser.core.data.ChromePosition
+import dev.clearbrowser.core.data.SearchSuggestion
+import dev.clearbrowser.core.theme.chromeFadeSpec
 import dev.clearbrowser.core.theme.chromeMorphSpring
 
 /**
@@ -109,10 +126,19 @@ fun ChromeSurface(
      * stop the page from stealing touches from it. See `WebContainer`.
      */
     onBoundsChanged: (android.graphics.RectF?) -> Unit,
+    onQueryChange: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val collapsed = state.chromeMode == ChromeMode.READING
+    val expanded = state.chromeMode == ChromeMode.EXPANDED
     val position = state.settings.chromePosition
+
+    val initialText = remember(state.url, state.chromeMode) {
+        if (state.isStartPage) "" else state.url
+    }
+    var omniboxText by remember(state.url, state.chromeMode) {
+        mutableStateOf(TextFieldValue(initialText, TextRange(0, initialText.length)))
+    }
 
     // One number drives the whole morph: 1 is the full bar, 0 is the handle.
     // Deriving width, offset and both fades from a single animated value is what
@@ -154,53 +180,88 @@ fun ChromeSurface(
         val currentWidth = lerpDp(handleWidth, expandedWidth, progress)
         val currentOffset = lerpDp(handleOffset, 0.dp, progress)
 
-        Row(
-            modifier = Modifier
-                .width(currentWidth)
-                .height(HANDLE_SIZE)
-                .graphicsLayer { translationX = currentOffset.toPx() }
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .onGloballyPositioned { coords ->
-                    val window = coords.boundsInWindow()
-                    bounds.set(window.left, window.top, window.right, window.bottom)
-                    onBoundsChanged(bounds)
-                },
-            horizontalArrangement = if (position == ChromePosition.LEFT) Arrangement.Start else Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Cross-fade rather than swap: the handle's icon grows out of the
-            // menu button it shares a glyph with, so the two states read as one
-            // object changing size.
-            if (progress > 0.5f) {
-                CompactBar(
-                    state = state,
-                    progress = progress,
-                    expanded = state.chromeMode == ChromeMode.EXPANDED,
-                    onBack = onBack,
-                    onReload = onReload,
-                    onStop = onStop,
-                    onMenu = onMenu,
-                    onOpenTabs = onOpenTabs,
-                    onExpandOmnibox = onExpandOmnibox,
-                    onNavigate = onNavigate,
-                    onCollapseOmnibox = onCollapseOmnibox,
-                    modifier = Modifier.graphicsLayer { alpha = ((progress - 0.5f) * 2f).coerceIn(0f, 1f) },
-                )
-            } else {
-                Box(
+            AnimatedVisibility(
+                visible = expanded && state.searchSuggestions.isNotEmpty(),
+                enter = fadeIn(chromeFadeSpec()) + expandVertically(expandFrom = Alignment.Bottom),
+                exit = fadeOut(chromeFadeSpec()) + shrinkVertically(shrinkTowards = Alignment.Bottom),
+            ) {
+                SuggestionsCard(
+                    suggestions = state.searchSuggestions,
+                    onSelect = { suggestion ->
+                        onNavigate(suggestion.destination)
+                        onCollapseOmnibox()
+                    },
+                    onInsert = { text ->
+                        omniboxText = TextFieldValue(text, TextRange(text.length))
+                        onQueryChange(text)
+                    },
                     modifier = Modifier
-                        .size(HANDLE_SIZE)
-                        .graphicsLayer { alpha = (1f - progress * 2f).coerceIn(0f, 1f) }
-                        .clickable(onClick = onReveal),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = stringResource(R.string.chrome_show_chrome),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(18.dp),
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .width(currentWidth)
+                    .height(HANDLE_SIZE)
+                    .graphicsLayer { translationX = currentOffset.toPx() }
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .onGloballyPositioned { coords ->
+                        val window = coords.boundsInWindow()
+                        bounds.set(window.left, window.top, window.right, window.bottom)
+                        onBoundsChanged(bounds)
+                    },
+                horizontalArrangement = when (position) {
+                    ChromePosition.RIGHT -> Arrangement.End
+                    ChromePosition.CENTER -> Arrangement.Center
+                    ChromePosition.LEFT -> Arrangement.Start
+                },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Cross-fade rather than swap: the handle's icon grows out of the
+                // menu button it shares a glyph with, so the two states read as one
+                // object changing size.
+                if (progress > 0.5f) {
+                    CompactBar(
+                        state = state,
+                        progress = progress,
+                        expanded = expanded,
+                        omniboxText = omniboxText,
+                        onOmniboxTextChange = {
+                            omniboxText = it
+                            onQueryChange(it.text)
+                        },
+                        onBack = onBack,
+                        onReload = onReload,
+                        onStop = onStop,
+                        onMenu = onMenu,
+                        onOpenTabs = onOpenTabs,
+                        onExpandOmnibox = onExpandOmnibox,
+                        onNavigate = onNavigate,
+                        onCollapseOmnibox = onCollapseOmnibox,
+                        modifier = Modifier.graphicsLayer { alpha = ((progress - 0.5f) * 2f).coerceIn(0f, 1f) },
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(HANDLE_SIZE)
+                            .graphicsLayer { alpha = (1f - progress * 2f).coerceIn(0f, 1f) }
+                            .clickable(onClick = onReveal),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.chrome_show_chrome),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         }
@@ -220,6 +281,8 @@ private fun CompactBar(
     state: ReadingUiState,
     progress: Float,
     expanded: Boolean,
+    omniboxText: TextFieldValue,
+    onOmniboxTextChange: (TextFieldValue) -> Unit,
     onBack: () -> Unit,
     onReload: () -> Unit,
     onStop: () -> Unit,
@@ -240,6 +303,8 @@ private fun CompactBar(
         if (expanded) {
             ExpandedOmnibox(
                 state = state,
+                value = omniboxText,
+                onValueChange = onOmniboxTextChange,
                 onNavigate = onNavigate,
                 onCollapse = onCollapseOmnibox,
             )
@@ -346,20 +411,12 @@ private fun CompactBar(
 @Composable
 private fun ExpandedOmnibox(
     state: ReadingUiState,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
     onNavigate: (String) -> Unit,
     onCollapse: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
-    var value by remember {
-        mutableStateOf(TextFieldValue(state.url, TextRange(0, state.url.length)))
-    }
-
-    // A url change always wins: while the field is open the url only changes
-    // because the user just navigated, and re-seeding then is what keeps the
-    // field honest. Mid-edit the url is stable, so this never fights the user.
-    LaunchedEffect(state.url) {
-        value = TextFieldValue(state.url, TextRange(0, state.url.length))
-    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -377,7 +434,7 @@ private fun ExpandedOmnibox(
         )
         TextField(
             value = value,
-            onValueChange = { value = it },
+            onValueChange = onValueChange,
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge,
             placeholder = {
@@ -407,10 +464,125 @@ private fun ExpandedOmnibox(
                 .weight(1f)
                 .focusRequester(focusRequester),
         )
-        IconButton(onClick = onCollapse) {
+        IconButton(
+            onClick = {
+                if (value.text.isNotEmpty()) {
+                    onValueChange(TextFieldValue("", TextRange.Zero))
+                } else {
+                    onCollapse()
+                }
+            },
+        ) {
             Icon(
                 imageVector = Icons.Rounded.Close,
                 contentDescription = stringResource(R.string.chrome_hide_chrome),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SuggestionsCard(
+    suggestions: List<SearchSuggestion>,
+    onSelect: (SearchSuggestion) -> Unit,
+    onInsert: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 3.dp,
+        shadowElevation = 6.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 260.dp),
+        ) {
+            itemsIndexed(suggestions) { index, suggestion ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                        thickness = 0.5.dp,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+                SuggestionItem(
+                    suggestion = suggestion,
+                    onClick = { onSelect(suggestion) },
+                    onInsert = { onInsert(suggestion.destination) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuggestionItem(
+    suggestion: SearchSuggestion,
+    onClick: () -> Unit,
+    onInsert: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val icon = when (suggestion) {
+            is SearchSuggestion.Query -> Icons.Rounded.Search
+            is SearchSuggestion.Bookmark -> Icons.Rounded.Bookmark
+            is SearchSuggestion.History -> Icons.Rounded.History
+        }
+        val tint = when (suggestion) {
+            is SearchSuggestion.Query -> MaterialTheme.colorScheme.onSurfaceVariant
+            is SearchSuggestion.Bookmark -> MaterialTheme.colorScheme.primary
+            is SearchSuggestion.History -> MaterialTheme.colorScheme.onSurfaceVariant
+        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(20.dp),
+        )
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = suggestion.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            suggestion.subtitle?.let { sub ->
+                Text(
+                    text = sub,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        IconButton(
+            onClick = onInsert,
+            modifier = Modifier.size(48.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.NorthWest,
+                contentDescription = stringResource(R.string.chrome_insert_suggestion),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
