@@ -255,7 +255,7 @@ clear-browser/
 
 **1. Clone the repository:**
 ```bash
-git clone https://github.com/vylt/clear-browser.git
+git clone https://github.com/vylt-gh/clear-browser.git
 cd clear-browser
 ```
 
