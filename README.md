@@ -6,7 +6,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat&logo=android&logoColor=white" alt="Platform: Android" />
-  <img src="https://img.shields.io/badge/Release-v0.3.0-blue?style=flat&logo=github" alt="Release: v0.3.0" />
+  <img src="https://img.shields.io/badge/Release-v0.4.0-blue?style=flat&logo=github" alt="Release: v0.4.0" />
   <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=kotlin&logoColor=white" alt="Kotlin 2.3.20" />
   <img src="https://img.shields.io/badge/Engine-Mozilla%20GeckoView-FF7139?style=flat&logo=firefox&logoColor=white" alt="Engine: Mozilla GeckoView" />
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
@@ -187,13 +187,35 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 77 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 89 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records
 ├── gradle/libs.versions.toml                  # Version catalog
 └── README.md
 ```
+
+---
+
+## Releases & Changelog
+
+### v0.4.0 (Latest)
+- **Dark Mode for Web Content**: 3-option toggle (`System` / `Dark` / `Light`) communicating directly with websites via CSS `prefers-color-scheme` without page reloads.
+- **Find in Page**: Real-time in-page search bar with match counter (`X of Y`), forward/backward navigation, auto-focus, and auto-scrolling to active matches.
+- **HTML5 Fullscreen Video**: Full support for HTML5 `video.requestFullscreen()` and element fullscreen with automatic status and navigation bar hiding, zero insets, and back-press handling.
+- **External App & Intent URI Handling**: Routing for `intent://`, `market://`, `mailto:`, `tel:`, `sms:`, and app deep links with security sanitization and automatic fallback to `browser_fallback_url` or Play Store web.
+- **Command & Automation Dispatch**: Control all browser actions (find, theme, menu, tabs, new_tab, navigate) directly via Android Intent extras for easy testing and automation (`adb shell am start -n dev.clearbrowser/.MainActivity --es command ...`).
+
+### v0.3.0
+- **Adaptive Site Top Bar**: Dominant color extraction for website headers via `TopBarSampler` and notch safe area integration.
+- **Frosted Glass Aesthetics**: Seamless acrylic styling with specular highlights and rim gradients.
+
+### v0.2.0
+- **Engine Swap**: Replaced system WebView with Mozilla GeckoView and hardware WebRender compositing.
+- **Built-in Adblocking**: Bundled uBlock Origin MV2 (`uBlock0@raymondhill.net`) with strict tracking protection.
+
+### v0.1.0
+- **Initial Prototype**: Reading-first morphing omnibox chrome, isolated Incognito sessions, and single-tab detached lifecycle.
 
 ---
 
