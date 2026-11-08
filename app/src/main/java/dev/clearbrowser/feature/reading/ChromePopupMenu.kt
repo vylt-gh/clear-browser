@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmarks
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Icon
@@ -129,12 +131,15 @@ fun ChromePopupMenu(
     visible: Boolean,
     canBookmark: Boolean = false,
     isBookmarked: Boolean = false,
+    canShare: Boolean = false,
     onToggleBookmark: () -> Unit = {},
     onDismiss: () -> Unit,
     onBookmarks: () -> Unit,
     onHistory: () -> Unit,
     onExtensions: () -> Unit,
     onFindInPage: () -> Unit,
+    onShare: () -> Unit = {},
+    onCopyLink: () -> Unit = {},
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -212,6 +217,24 @@ fun ChromePopupMenu(
                     onFindInPage()
                 },
             )
+            if (canShare) {
+                PopupMenuItem(
+                    icon = Icons.Rounded.Share,
+                    label = stringResource(R.string.menu_share),
+                    onClick = {
+                        onDismiss()
+                        onShare()
+                    },
+                )
+                PopupMenuItem(
+                    icon = Icons.Rounded.ContentCopy,
+                    label = stringResource(R.string.menu_copy_link),
+                    onClick = {
+                        onDismiss()
+                        onCopyLink()
+                    },
+                )
+            }
             PopupMenuItem(
                 icon = Icons.Rounded.Settings,
                 label = stringResource(R.string.menu_settings),

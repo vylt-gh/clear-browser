@@ -4,10 +4,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -74,12 +77,16 @@ fun SettingsSheet(
     onImmersiveChange: (Boolean) -> Unit,
     onIncognitoChange: (Boolean) -> Unit,
     onWebThemeChange: (WebTheme) -> Unit,
-    onClearBrowsingData: () -> Unit,
+    onTextZoomChange: (Int) -> Unit = {},
+    onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val settings = state.settings
     var showClearConfirm by remember { mutableStateOf(false) }
+    var clearHistory by remember { mutableStateOf(true) }
+    var clearCookies by remember { mutableStateOf(true) }
+    var clearCache by remember { mutableStateOf(true) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -137,6 +144,13 @@ fun SettingsSheet(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
+            TextScalingControl(
+                selected = settings.textZoom,
+                onSelect = onTextZoomChange,
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
             SwitchRow(
                 title = stringResource(R.string.menu_auto_hide),
                 subtitle = stringResource(R.string.menu_auto_hide_subtitle),
@@ -190,19 +204,90 @@ fun SettingsSheet(
                 Text(text = stringResource(R.string.settings_clear_data_confirm_title))
             },
             text = {
-                Text(text = stringResource(R.string.settings_clear_data_confirm_message))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_clear_data_confirm_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { clearHistory = !clearHistory }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        Checkbox(
+                            checked = clearHistory,
+                            onCheckedChange = { clearHistory = it },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.settings_clear_history),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { clearCookies = !clearCookies }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        Checkbox(
+                            checked = clearCookies,
+                            onCheckedChange = { clearCookies = it },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.settings_clear_cookies),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { clearCache = !clearCache }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        Checkbox(
+                            checked = clearCache,
+                            onCheckedChange = { clearCache = it },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.settings_clear_cache),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showClearConfirm = false
-                        onClearBrowsingData()
+                        onClearBrowsingData(clearHistory, clearCookies, clearCache)
                         onDismiss()
                     },
+                    enabled = clearHistory || clearCookies || clearCache,
                 ) {
                     Text(
                         text = stringResource(R.string.settings_clear_data_confirm_action),
-                        color = MaterialTheme.colorScheme.error,
+                        color = if (clearHistory || clearCookies || clearCache) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
                     )
                 }
             },
@@ -455,6 +540,47 @@ private fun ClearDataRow(onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TextScalingControl(
+    selected: Int,
+    onSelect: (Int) -> Unit,
+) {
+    val options = listOf(80, 100, 125, 150)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_text_zoom),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.settings_text_zoom_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, zoom ->
+                SegmentedButton(
+                    selected = selected == zoom,
+                    onClick = { onSelect(zoom) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    label = {
+                        Text(
+                            text = "$zoom%",
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    },
+                )
+            }
         }
     }
 }

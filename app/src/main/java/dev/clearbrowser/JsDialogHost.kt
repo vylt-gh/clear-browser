@@ -42,10 +42,14 @@ fun JsDialogHost(
             onDismiss()
         },
         title = {
-            Text(text = dialog.message.ifBlank { "This page is asking for input." })
+            val titleText = dialog.title ?: if (dialog.hasInput) "This page is asking for input." else dialog.message
+            Text(text = titleText)
         },
         text = {
             Column {
+                if (dialog.title != null) {
+                    Text(text = dialog.message)
+                }
                 if (dialog.hasInput) {
                     TextField(
                         value = input,
@@ -63,7 +67,7 @@ fun JsDialogHost(
                     dialog.onAccept(if (dialog.hasInput) input else null)
                     onDismiss()
                 },
-            ) { Text("OK") }
+            ) { Text(dialog.confirmText) }
         },
         dismissButton = if (dialog.withCancel) {
             {
@@ -72,7 +76,7 @@ fun JsDialogHost(
                         dialog.onDismiss()
                         onDismiss()
                     },
-                ) { Text("Cancel") }
+                ) { Text(dialog.dismissText) }
             }
         } else {
             null

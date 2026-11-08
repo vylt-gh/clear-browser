@@ -17,6 +17,7 @@ import dev.clearbrowser.core.data.SessionStore
 import dev.clearbrowser.core.data.SettingsStore
 import dev.clearbrowser.core.data.resolveAddress
 import dev.clearbrowser.core.engine.BrowserProfile
+import dev.clearbrowser.core.engine.ClearGeckoRuntime
 import dev.clearbrowser.core.engine.Engine
 import dev.clearbrowser.core.engine.EngineListener
 import dev.clearbrowser.core.engine.GeckoViewEngine
@@ -90,6 +91,8 @@ data class ReadingUiState(
     val settingsVisible: Boolean = false,
     /** Whether the extensions management sheet is open. */
     val extensionsVisible: Boolean = false,
+    /** Active context menu info for long-pressed link/image element. */
+    val contextMenu: dev.clearbrowser.core.engine.ContextMenuInfo? = null,
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -292,7 +295,15 @@ class ReadingViewModel(
         viewModelScope.launch {
             settingsStore.state.collect { settings ->
                 _state.value = _state.value.copy(settings = settings)
+                applyTextZoom(settings.textZoom)
             }
+        }
+    }
+
+    private fun applyTextZoom(zoom: Int) {
+        val factor = (zoom.coerceIn(50, 300)) / 100f
+        runCatching {
+            ClearGeckoRuntime.setFontSizeFactor(factor)
         }
     }
 
@@ -365,6 +376,7 @@ class ReadingViewModel(
             ensureActiveEngine()
         }
         publishSession()
+        applyTextZoom(_state.value.settings.textZoom)
     }
 
     // ------------------------------------------------------------------ restore
@@ -741,8 +753,19 @@ class ReadingViewModel(
         engines.values.firstOrNull()?.let { runCatching { it.flushCookies() } }
     }
 
-    fun clearBrowsingData() {
-        engines.values.forEach { runCatching { it.clearBrowsingData() } }
+    fun clearBrowsingData(
+        clearHistory: Boolean = true,
+        clearCookies: Boolean = true,
+        clearCache: Boolean = true,
+    ) {
+        if (clearHistory) {
+            clearHistory()
+        }
+        engines.values.forEach { runCatching { it.clearBrowsingData(clearCookies, clearCache) } }
+    }
+
+    fun setTextZoom(zoom: Int) {
+        settingsStore.setTextZoom(zoom)
     }
 
     fun reserveChromeBounds(bounds: android.graphics.RectF?) {
@@ -948,6 +971,12 @@ class ReadingViewModel(
     fun closeExtensions() {
         if (_state.value.extensionsVisible) {
             _state.value = _state.value.copy(extensionsVisible = false)
+        }
+    }
+
+    fun closeContextMenu() {
+        if (_state.value.contextMenu != null) {
+            _state.value = _state.value.copy(contextMenu = null)
         }
     }
 
@@ -1198,6 +1227,11 @@ class ReadingViewModel(
                 findActiveMatch = activeMatch,
                 findTotalMatches = totalMatches,
             )
+        }
+
+        override fun onContextMenu(info: dev.clearbrowser.core.engine.ContextMenuInfo) {
+            if (!isActive) return
+            _state.value = _state.value.copy(contextMenu = info)
         }
     }
 

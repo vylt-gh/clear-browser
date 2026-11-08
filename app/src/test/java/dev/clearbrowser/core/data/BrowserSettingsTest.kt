@@ -17,4 +17,16 @@ class BrowserSettingsTest {
         assertEquals(3, themes.size)
         assertEquals(setOf(WebTheme.SYSTEM, WebTheme.DARK, WebTheme.LIGHT), themes)
     }
+
+    @Test
+    fun defaultTextZoomIs100Percent() {
+        val settings = BrowserSettings()
+        assertEquals(100, settings.textZoom)
+    }
+
+    @Test
+    fun customTextZoomIsRetained() {
+        val settings = BrowserSettings(textZoom = 150)
+        assertEquals(150, settings.textZoom)
+    }
 }

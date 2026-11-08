@@ -84,6 +84,9 @@ data class BrowserSettings(
 
     /** Preferred color scheme for websites (prefers-color-scheme). */
     val webTheme: WebTheme = WebTheme.SYSTEM,
+
+    /** Text scaling zoom percentage (e.g. 80, 100, 125, 150). */
+    val textZoom: Int = 100,
 ) {
 }
 
@@ -116,6 +119,8 @@ class SettingsStore(context: Context) {
 
     fun setWebTheme(theme: WebTheme) = update { it.copy(webTheme = theme) }
 
+    fun setTextZoom(zoom: Int) = update { it.copy(textZoom = zoom) }
+
     private inline fun update(transform: (BrowserSettings) -> BrowserSettings) {
         val next = transform(_state.value)
         _state.value = next
@@ -127,6 +132,7 @@ class SettingsStore(context: Context) {
             .putBoolean(KEY_DYNAMIC, next.dynamicColor)
             .putString(KEY_SEARCH_ENGINE, next.searchEngine.name)
             .putString(KEY_WEB_THEME, next.webTheme.name)
+            .putInt(KEY_TEXT_ZOOM, next.textZoom)
             .apply()
     }
 
@@ -146,6 +152,7 @@ class SettingsStore(context: Context) {
         webTheme = prefs.getString(KEY_WEB_THEME, null)
             ?.let { runCatching { WebTheme.valueOf(it) }.getOrNull() }
             ?: WebTheme.SYSTEM,
+        textZoom = prefs.getInt(KEY_TEXT_ZOOM, 100),
     )
 
     private companion object {
@@ -156,5 +163,6 @@ class SettingsStore(context: Context) {
         const val KEY_DYNAMIC = "dynamic_color"
         const val KEY_SEARCH_ENGINE = "search_engine"
         const val KEY_WEB_THEME = "web_theme"
+        const val KEY_TEXT_ZOOM = "text_zoom"
     }
 }

@@ -34,6 +34,10 @@ object ClearGeckoRuntime {
         instance?.settings?.setPreferredColorScheme(scheme)
     }
 
+    fun setFontSizeFactor(factor: Float) {
+        instance?.settings?.fontSizeFactor = factor
+    }
+
     fun getUBlockDashboardUrl(callback: (String?) -> Unit) {
         val cached = uBlockOptionsUrl
         if (!cached.isNullOrBlank()) {

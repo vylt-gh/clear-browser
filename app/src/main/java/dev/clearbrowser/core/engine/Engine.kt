@@ -100,8 +100,8 @@ interface Engine {
      */
     fun flushCookies()
 
-    /** Drop all cookies and caches for the current browsing context. */
-    fun clearBrowsingData()
+    /** Drop cookies and/or caches for the current browsing context. */
+    fun clearBrowsingData(clearCookies: Boolean = true, clearCache: Boolean = true)
 
     /** Erase everything this profile holds, leaving the view usable. */
     fun clearProfileData()
@@ -190,7 +190,19 @@ interface EngineListener {
 
     /** Active find in page result. */
     fun onFindResult(activeMatch: Int, totalMatches: Int) = Unit
+
+    /** Context menu requested (e.g. long-press on link, image, or media). */
+    fun onContextMenu(info: ContextMenuInfo) = Unit
 }
+
+/** Information about a context element tapped or long-pressed. */
+data class ContextMenuInfo(
+    val linkUrl: String? = null,
+    val srcUrl: String? = null,
+    val title: String? = null,
+    val isImage: Boolean = false,
+    val isVideo: Boolean = false,
+)
 
 /**
  * A JS dialog, in engine-neutral terms.
@@ -201,11 +213,14 @@ interface EngineListener {
  */
 data class JsDialog(
     val message: String,
-    val defaultValue: String?,
+    val defaultValue: String? = null,
     /** True for `prompt`, false for `alert` and `confirm`. */
-    val hasInput: Boolean,
+    val hasInput: Boolean = false,
     /** True for `confirm` and `prompt`, which can be cancelled. */
-    val withCancel: Boolean,
+    val withCancel: Boolean = false,
+    val title: String? = null,
+    val confirmText: String = "OK",
+    val dismissText: String = "Cancel",
     val onAccept: (String?) -> Unit,
     val onDismiss: () -> Unit,
 )

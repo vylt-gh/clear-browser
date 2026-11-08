@@ -1,7 +1,11 @@
 package dev.clearbrowser
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -36,6 +40,27 @@ class MainActivity : ComponentActivity() {
 
     private val bookmarks: BookmarkStore
         get() = app.bookmarks
+
+    private fun sharePage(url: String, title: String) {
+        if (url.isBlank() || url.startsWith("about:")) return
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, url)
+            if (title.isNotBlank()) {
+                putExtra(Intent.EXTRA_SUBJECT, title)
+            }
+            type = "text/plain"
+        }
+        startActivity(Intent.createChooser(sendIntent, null))
+    }
+
+    private fun copyLink(url: String) {
+        if (url.isBlank() || url.startsWith("about:")) return
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("URL", url)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, R.string.toast_link_copied, Toast.LENGTH_SHORT).show()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The fast restore path. If the system killed us and kept this Bundle,
@@ -169,6 +194,24 @@ class MainActivity : ComponentActivity() {
                 val exit = intent.getBooleanExtra("exit", false)
                 if (exit) viewModel.exitFullScreen()
             }
+            command == "share" || action == "dev.clearbrowser.ACTION_SHARE" -> {
+                val s = viewModel.state.value
+                sharePage(s.url, s.title)
+            }
+            command == "copy_link" || action == "dev.clearbrowser.ACTION_COPY_LINK" -> {
+                val s = viewModel.state.value
+                copyLink(s.url)
+            }
+            command == "zoom" || action == "dev.clearbrowser.ACTION_SET_ZOOM" -> {
+                val zoom = intent.getIntExtra("zoom", 100)
+                viewModel.setTextZoom(zoom)
+            }
+            command == "clear_data" || action == "dev.clearbrowser.ACTION_CLEAR_DATA" -> {
+                val clearHistory = intent.getBooleanExtra("history", true)
+                val clearCookies = intent.getBooleanExtra("cookies", true)
+                val clearCache = intent.getBooleanExtra("cache", true)
+                viewModel.clearBrowsingData(clearHistory, clearCookies, clearCache)
+            }
             intent.dataString != null -> {
                 viewModel.navigate(intent.dataString!!)
             }
@@ -272,6 +315,8 @@ class MainActivity : ComponentActivity() {
                 state.isFullscreen -> viewModel.exitFullScreen()
                 // Find in page is dismissed before sheet/history navigation.
                 state.findInPageVisible -> viewModel.closeFindInPage()
+                // Context menu
+                state.contextMenu != null -> viewModel.closeContextMenu()
                 // Popup menu from button
                 state.menuPopupVisible -> viewModel.closeMenuPopup()
                 // Dedicated sheets
@@ -305,7 +350,34 @@ class MainActivity : ComponentActivity() {
             onCloseExtensions = viewModel::closeExtensions,
             onOpenSettings = viewModel::openSettings,
             onCloseSettings = viewModel::closeSettings,
-            onClearBrowsingData = viewModel::clearBrowsingData,
+            onClearBrowsingData = { h, c, k ->
+                viewModel.clearBrowsingData(h, c, k)
+                Toast.makeText(this@MainActivity, R.string.toast_browsing_data_cleared, Toast.LENGTH_SHORT).show()
+            },
+            onTextZoomChange = viewModel::setTextZoom,
+            onSharePage = {
+                val s = viewModel.state.value
+                sharePage(s.url, s.title)
+            },
+            onCopyLink = {
+                val s = viewModel.state.value
+                copyLink(s.url)
+            },
+            onShareUrl = ::sharePage,
+            onCopyUrl = ::copyLink,
+            onCloseContextMenu = viewModel::closeContextMenu,
+            onDownload = { url ->
+                host.startDownload(
+                    dev.clearbrowser.core.engine.DownloadRequest(
+                        url = url,
+                        userAgent = null,
+                        contentDisposition = null,
+                        mimeType = null,
+                        contentLength = -1L,
+                        suggestedFilename = dev.clearbrowser.core.engine.DownloadFilenameResolver.resolve(url, null, null),
+                    ),
+                )
+            },
             onOpenUBlockDashboard = viewModel::openUBlockDashboard,
             onOpenTabs = viewModel::openTabs,
             onSelectTab = { id ->

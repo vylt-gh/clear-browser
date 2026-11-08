@@ -7,6 +7,7 @@ import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
 import android.view.ViewGroup
+import dev.clearbrowser.R
 import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
@@ -210,6 +211,33 @@ class GeckoViewEngine(
                     ),
                 )
             }
+
+            override fun onContextMenu(
+                session: GeckoSession,
+                screenX: Int,
+                screenY: Int,
+                element: GeckoSession.ContentDelegate.ContextElement,
+            ) {
+                val link = element.linkUri?.ifBlank { null }
+                val src = element.srcUri?.ifBlank { null }
+                val title = element.title?.ifBlank { null }
+                    ?: element.linkText?.ifBlank { null }
+                    ?: element.altText?.ifBlank { null }
+
+                if (link != null || src != null) {
+                    mainHandler.post {
+                        listener.onContextMenu(
+                            ContextMenuInfo(
+                                linkUrl = link,
+                                srcUrl = src,
+                                title = title,
+                                isImage = element.type == GeckoSession.ContentDelegate.ContextElement.TYPE_IMAGE,
+                                isVideo = element.type == GeckoSession.ContentDelegate.ContextElement.TYPE_VIDEO,
+                            ),
+                        )
+                    }
+                }
+            }
         }
 
         session.compositorScrollDelegate = object : GeckoSession.CompositorScrollDelegate {
@@ -240,6 +268,77 @@ class GeckoViewEngine(
                 host.requestPermissions(list) { results ->
                     val allGranted = list.all { results[it] == true }
                     if (allGranted) callback.grant() else callback.reject()
+                }
+            }
+
+            override fun onContentPermissionRequest(
+                session: GeckoSession,
+                perm: GeckoSession.PermissionDelegate.ContentPermission,
+            ): GeckoResult<Int> {
+                val result = GeckoResult<Int>()
+                val hostName = perm.uri.let { runCatching { Uri.parse(it).host }.getOrNull() } ?: perm.uri
+                val permTypeStr = when (perm.permission) {
+                    GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> context.getString(R.string.permission_location)
+                    GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> context.getString(R.string.permission_notifications)
+                    GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE -> context.getString(R.string.permission_storage)
+                    else -> "features"
+                }
+
+                mainHandler.post {
+                    listener.onJsDialog(
+                        JsDialog(
+                            title = context.getString(R.string.permission_request_title),
+                            message = context.getString(R.string.permission_prompt, hostName, permTypeStr),
+                            confirmText = context.getString(R.string.permission_allow),
+                            dismissText = context.getString(R.string.permission_deny),
+                            hasInput = false,
+                            withCancel = true,
+                            onAccept = {
+                                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
+                            },
+                            onDismiss = {
+                                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+                            },
+                        ),
+                    )
+                }
+                return result
+            }
+
+            override fun onMediaPermissionRequest(
+                session: GeckoSession,
+                uri: String,
+                video: Array<out GeckoSession.PermissionDelegate.MediaSource>?,
+                audio: Array<out GeckoSession.PermissionDelegate.MediaSource>?,
+                callback: GeckoSession.PermissionDelegate.MediaCallback,
+            ) {
+                val hostName = runCatching { Uri.parse(uri).host }.getOrNull() ?: uri
+                val hasVideo = !video.isNullOrEmpty()
+                val hasAudio = !audio.isNullOrEmpty()
+                val deviceStr = when {
+                    hasVideo && hasAudio -> context.getString(R.string.permission_camera_microphone)
+                    hasVideo -> context.getString(R.string.permission_camera)
+                    hasAudio -> context.getString(R.string.permission_microphone)
+                    else -> "Camera / Microphone"
+                }
+
+                mainHandler.post {
+                    listener.onJsDialog(
+                        JsDialog(
+                            title = context.getString(R.string.permission_request_title),
+                            message = context.getString(R.string.permission_media_prompt, hostName, deviceStr),
+                            confirmText = context.getString(R.string.permission_allow),
+                            dismissText = context.getString(R.string.permission_deny),
+                            hasInput = false,
+                            withCancel = true,
+                            onAccept = {
+                                callback.grant(video?.firstOrNull(), audio?.firstOrNull())
+                            },
+                            onDismiss = {
+                                callback.reject()
+                            },
+                        ),
+                    )
                 }
             }
         }
@@ -447,8 +546,17 @@ class GeckoViewEngine(
         // Handled automatically by Gecko engine runtime
     }
 
-    override fun clearBrowsingData() {
-        runtime.storageController.clearData(StorageController.ClearFlags.ALL)
+    override fun clearBrowsingData(clearCookies: Boolean, clearCache: Boolean) {
+        var flags = 0L
+        if (clearCookies) {
+            flags = flags or StorageController.ClearFlags.COOKIES or StorageController.ClearFlags.DOM_STORAGES
+        }
+        if (clearCache) {
+            flags = flags or StorageController.ClearFlags.ALL_CACHES
+        }
+        if (flags != 0L) {
+            runtime.storageController.clearData(flags)
+        }
     }
 
     override fun clearProfileData() {

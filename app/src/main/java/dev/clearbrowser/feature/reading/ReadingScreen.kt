@@ -95,7 +95,14 @@ fun ReadingScreen(
     onCloseExtensions: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onCloseSettings: () -> Unit = {},
-    onClearBrowsingData: () -> Unit = {},
+    onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onTextZoomChange: (Int) -> Unit = {},
+    onSharePage: () -> Unit = {},
+    onCopyLink: () -> Unit = {},
+    onShareUrl: (String, String) -> Unit = { _, _ -> },
+    onCopyUrl: (String) -> Unit = {},
+    onCloseContextMenu: () -> Unit = {},
+    onDownload: (String) -> Unit = {},
     onOpenUBlockDashboard: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -198,6 +205,8 @@ fun ReadingScreen(
                     onHistory = onOpenHistory,
                     onExtensions = onOpenExtensions,
                     onFindInPage = onOpenFindInPage,
+                    onSharePage = onSharePage,
+                    onCopyLink = onCopyLink,
                     onSettings = onOpenSettings,
                     onToggleBookmark = onToggleBookmark,
                     // The bottom edge is the whole design: the thumb should not have
@@ -259,6 +268,7 @@ fun ReadingScreen(
                     onImmersiveChange = onImmersiveChange,
                     onIncognitoChange = onIncognitoChange,
                     onWebThemeChange = onWebThemeChange,
+                    onTextZoomChange = onTextZoomChange,
                     onClearBrowsingData = onClearBrowsingData,
                 )
             }
@@ -267,6 +277,24 @@ fun ReadingScreen(
                 ExtensionsSheet(
                     onDismiss = onCloseExtensions,
                     onOpenDashboard = onOpenUBlockDashboard,
+                )
+            }
+
+            state.contextMenu?.let { menuInfo ->
+                ContextMenuSheet(
+                    info = menuInfo,
+                    onDismiss = onCloseContextMenu,
+                    onOpenNewTab = { url ->
+                        onNewTab()
+                        onNavigate(url)
+                    },
+                    onCopyLink = { url ->
+                        onCopyUrl(url)
+                    },
+                    onShareLink = { url ->
+                        onShareUrl(url, menuInfo.title.orEmpty())
+                    },
+                    onDownload = onDownload,
                 )
             }
 

@@ -637,11 +637,14 @@ class WebViewEngine(
 
     override fun flushCookies() = cookies.flush()
 
-    override fun clearBrowsingData() {
-        cookies.clearAll()
-        webView.clearCache(true)
-        webView.clearHistory()
-        webView.clearFormData()
+    override fun clearBrowsingData(clearCookies: Boolean, clearCache: Boolean) {
+        if (clearCookies) {
+            cookies.clearAll()
+            webView.clearFormData()
+        }
+        if (clearCache) {
+            webView.clearCache(true)
+        }
     }
 
     /**
