@@ -6,13 +6,13 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat&logo=android&logoColor=white" alt="Platform: Android" />
-  <img src="https://img.shields.io/badge/Release-v0.6.0-blue?style=flat&logo=github" alt="Release: v0.6.0" />
+  <img src="https://img.shields.io/badge/Release-v0.7.0-blue?style=flat&logo=github" alt="Release: v0.7.0" />
   <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=kotlin&logoColor=white" alt="Kotlin 2.3.20" />
   <img src="https://img.shields.io/badge/Engine-Mozilla%20GeckoView-FF7139?style=flat&logo=firefox&logoColor=white" alt="Engine: Mozilla GeckoView" />
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-97%20passing-success" alt="Tests: 97 passing" />
+  <img src="https://img.shields.io/badge/Tests-100%20passing-success" alt="Tests: 100 passing" />
 </p>
 
 ---
@@ -189,7 +189,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 97 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 100 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records
@@ -201,7 +201,15 @@ clear-browser/
 
 ## Releases & Changelog
 
-### v0.6.0 (Latest)
+### v0.7.0 (Latest)
+- **Chrome Visual Theming**: Added a 3-way visual chrome style selector in Settings (`Clear`, `Acrylic`, `Material`):
+  - **Clear** (Default): Signature frosted glass aesthetic with multi-stop acrylic gradient, specular rim highlight borders, ambient drop shadow, and speech-bubble anchored popup menu.
+  - **Acrylic**: Translucent `surfaceContainer` (88%–78% alpha) with `outline` specular gradient border, 8.dp elevation, and standard rounded card popup menu.
+  - **Material** (from v0.1): Classic pure solid Material 3 `surfaceContainer` and `surfaceContainerHigh` with no artificial borders or translucent gradients, matching the original v0.1 look.
+- **Segmented Chrome Theme Control**: Interactive `SingleChoiceSegmentedButtonRow` embedded seamlessly in the Settings bottom sheet.
+- **Intent Automation Dispatch**: Full Intent support for automating the Chrome theme via `--es command chrome_theme --es theme CLEAR|ACRYLIC|MATERIAL`.
+
+### v0.6.0
 - **Share Page & Copy Link**: Added quick sharing via Android standard `ACTION_SEND` chooser and one-tap link copying directly in the anchored popup menu.
 - **Granular Clear Browsing Data**: Interactive clearing dialog with selectable checkboxes for browsing history, cookies/site data, and cached web content.
 - **Web Text Scaling & Zoom**: Dynamically scale web text sizes (`80%`, `100%`, `125%`, `150%`) across all websites via GeckoView's font size factor.
