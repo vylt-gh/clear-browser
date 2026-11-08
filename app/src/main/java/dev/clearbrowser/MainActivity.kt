@@ -1,9 +1,13 @@
 package dev.clearbrowser
 
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -13,6 +17,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -40,6 +45,39 @@ class MainActivity : ComponentActivity() {
 
     private val bookmarks: BookmarkStore
         get() = app.bookmarks
+
+    private val downloads: dev.clearbrowser.core.data.DownloadsStore by lazy {
+        dev.clearbrowser.core.data.DownloadsStore(applicationContext)
+    }
+
+    private val downloadReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
+                vm?.refreshDownloads()
+            }
+        }
+    }
+
+    private fun openDownload(item: dev.clearbrowser.core.data.DownloadItem) {
+        val uri = downloads.getUriForDownloadedFile(item.id)
+            ?: item.localUri?.let { Uri.parse(it) }
+        if (uri != null) {
+            val mime = downloads.getMimeTypeForDownloadedFile(item.id)
+                ?: item.mimeType
+                ?: "application/octet-stream"
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, mime)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            runCatching {
+                startActivity(Intent.createChooser(intent, item.title))
+            }.onFailure {
+                Toast.makeText(this, R.string.download_cannot_open, Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, R.string.download_file_not_found, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     private fun sharePage(url: String, title: String) {
         if (url.isBlank() || url.startsWith("about:")) return
@@ -78,6 +116,14 @@ class MainActivity : ComponentActivity() {
         // system's contrast scrim would double up into a visible band.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        ContextCompat.registerReceiver(
+            this,
+            downloadReceiver,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+
         super.onCreate(savedInstanceState)
         setContent { Browser() }
     }
@@ -114,6 +160,7 @@ class MainActivity : ComponentActivity() {
      * must not let a private window come back at all.
      */
     override fun onDestroy() {
+        runCatching { unregisterReceiver(downloadReceiver) }
         vm?.onHostDestroyed(finishing = !isChangingConfigurations)
         vm = null
         super.onDestroy()
@@ -176,6 +223,9 @@ class MainActivity : ComponentActivity() {
             }
             command == "history" || action == "dev.clearbrowser.ACTION_HISTORY" -> {
                 viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.HISTORY)
+            }
+            command == "downloads" || action == "dev.clearbrowser.ACTION_DOWNLOADS" -> {
+                viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.DOWNLOADS)
             }
             command == "tabs" || action == "dev.clearbrowser.ACTION_TABS" -> {
                 viewModel.openTabs()
@@ -282,7 +332,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Browser() {
         val viewModel: ReadingViewModel = viewModel(
-            factory = ReadingViewModel.Factory(settings, sessionStore, history, bookmarks),
+            factory = ReadingViewModel.Factory(settings, sessionStore, history, bookmarks, downloads),
         )
         // Assigned for onNewIntent and the lifecycle callbacks, which all
         // arrive outside composition.
@@ -295,6 +345,7 @@ class MainActivity : ComponentActivity() {
         val state by viewModel.state.collectAsStateWithLifecycle()
         val historyEntries by viewModel.history.collectAsStateWithLifecycle()
         val bookmarkEntries by viewModel.bookmarks.collectAsStateWithLifecycle()
+        val downloadEntries by viewModel.downloads.collectAsStateWithLifecycle()
 
         // Recorded before the engine attaches, so the very first load is the
         // requested page rather than a detour through the start page.
@@ -369,6 +420,7 @@ class MainActivity : ComponentActivity() {
             state = state,
             bookmarks = bookmarkEntries,
             history = historyEntries,
+            downloads = downloadEntries,
             attachEngine = { parent -> viewModel.attach(parent, this, host) },
             onSystemDarkChange = viewModel::setSystemDark,
             onBack = viewModel::goBack,
@@ -378,6 +430,9 @@ class MainActivity : ComponentActivity() {
             onCloseMenuPopup = viewModel::closeMenuPopup,
             onOpenBookmarks = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.BOOKMARKS) },
             onOpenHistory = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.HISTORY) },
+            onOpenDownloads = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.DOWNLOADS) },
+            onOpenDownload = ::openDownload,
+            onRemoveDownload = viewModel::removeDownload,
             onOpenExtensions = viewModel::openExtensions,
             onCloseExtensions = viewModel::closeExtensions,
             onOpenSettings = viewModel::openSettings,

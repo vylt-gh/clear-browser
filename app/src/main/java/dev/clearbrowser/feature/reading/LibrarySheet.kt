@@ -1,21 +1,31 @@
 package dev.clearbrowser.feature.reading
 
+import android.app.DownloadManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.VideoFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -25,6 +35,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -46,15 +57,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.Bookmark
+import dev.clearbrowser.core.data.DownloadItem
 import dev.clearbrowser.core.data.HistoryEntry
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Which half of the library a sheet is showing. */
+/** Which section of the library a sheet is showing. */
 enum class LibraryTab {
     BOOKMARKS,
     HISTORY,
+    DOWNLOADS,
 }
 
 private data class DisplayLibraryItem(
@@ -63,8 +76,15 @@ private data class DisplayLibraryItem(
     val subtitle: String,
 )
 
+private data class DisplayDownloadItem(
+    val item: DownloadItem,
+    val title: String,
+    val subtitle: String,
+    val isError: Boolean,
+)
+
 /**
- * Bookmarks and history, in one sheet.
+ * Bookmarks, history, and downloads in one sheet.
  *
  * Highly optimized for 120Hz smooth scrolling:
  * - Subtitles and hosts are pre-computed once per list update rather than on every frame.
@@ -78,11 +98,14 @@ fun LibrarySheet(
     tab: LibraryTab,
     bookmarks: List<Bookmark>,
     history: List<HistoryEntry>,
+    downloads: List<DownloadItem> = emptyList(),
     onSelectTab: (LibraryTab) -> Unit,
     onOpen: (String) -> Unit,
     onRemoveBookmark: (String) -> Unit,
     onRemoveHistory: (String) -> Unit,
     onClearHistory: () -> Unit,
+    onOpenDownload: (DownloadItem) -> Unit = {},
+    onRemoveDownload: (Long) -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -104,6 +127,7 @@ fun LibrarySheet(
 
     val removeBookmarkDesc = stringResource(R.string.library_remove_bookmark)
     val removeHistoryDesc = stringResource(R.string.library_remove_history)
+    val removeDownloadDesc = stringResource(R.string.library_remove_download)
 
     // Pre-format display items once when list changes so scrolling performs ZERO string or date parsing.
     val displayBookmarks = remember(bookmarks) {
@@ -131,6 +155,42 @@ fun LibrarySheet(
                 url = entry.url,
                 title = entry.title.ifBlank { host },
                 subtitle = subtitle,
+            )
+        }
+    }
+
+    val downloadingLabel = stringResource(R.string.download_status_downloading)
+    val downloadFailedLabel = stringResource(R.string.download_status_failed)
+    val downloadPausedLabel = stringResource(R.string.download_status_paused)
+
+    val displayDownloads = remember(downloads) {
+        val now = System.currentTimeMillis()
+        downloads.map { item ->
+            val time = formatRelativeTime(item.timestamp, now)
+            val size = formatFileSize(item.totalSizeBytes)
+            val subtitle = when (item.status) {
+                DownloadManager.STATUS_SUCCESSFUL -> {
+                    if (time.isBlank()) size else "$size · $time"
+                }
+                DownloadManager.STATUS_RUNNING -> {
+                    val downloaded = formatFileSize(item.downloadedBytes)
+                    if (item.totalSizeBytes > 0) {
+                        "$downloadingLabel $downloaded / $size"
+                    } else {
+                        "$downloadingLabel $downloaded"
+                    }
+                }
+                DownloadManager.STATUS_PAUSED -> downloadPausedLabel
+                DownloadManager.STATUS_FAILED -> {
+                    if (time.isBlank()) downloadFailedLabel else "$downloadFailedLabel · $time"
+                }
+                else -> if (time.isBlank()) size else "$size · $time"
+            }
+            DisplayDownloadItem(
+                item = item,
+                title = item.title,
+                subtitle = subtitle,
+                isError = item.status == DownloadManager.STATUS_FAILED,
             )
         }
     }
@@ -234,6 +294,52 @@ fun LibrarySheet(
                         }
                     }
                 }
+
+                LibraryTab.DOWNLOADS -> {
+                    if (displayDownloads.isEmpty()) {
+                        EmptyLibrary(
+                            icon = Icons.Rounded.Download,
+                            title = stringResource(R.string.library_empty_downloads),
+                            body = stringResource(R.string.library_empty_downloads_hint),
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false),
+                        ) {
+                            items(
+                                items = displayDownloads,
+                                key = { it.item.id },
+                                contentType = { "download_row" },
+                            ) { item ->
+                                LibraryRow(
+                                    title = item.title,
+                                    subtitle = item.subtitle,
+                                    removeDescription = removeDownloadDesc,
+                                    onOpen = { onOpenDownload(item.item) },
+                                    onRemove = { onRemoveDownload(item.item.id) },
+                                    leadingIcon = {
+                                        Surface(
+                                            modifier = Modifier.size(36.dp),
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                                        ) {
+                                            Icon(
+                                                imageVector = iconForMime(item.item.mimeType),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier
+                                                    .padding(8.dp)
+                                                    .size(20.dp),
+                                            )
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -270,6 +376,7 @@ private fun LibraryRow(
     onOpen: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
+    leadingIcon: @Composable (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
@@ -281,6 +388,10 @@ private fun LibraryRow(
             .padding(start = 14.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leadingIcon != null) {
+            leadingIcon()
+            Spacer(modifier = Modifier.width(12.dp))
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -347,6 +458,18 @@ private fun EmptyLibrary(
 private fun LibraryTab.labelRes(): Int = when (this) {
     LibraryTab.BOOKMARKS -> R.string.library_bookmarks
     LibraryTab.HISTORY -> R.string.library_history
+    LibraryTab.DOWNLOADS -> R.string.library_downloads
+}
+
+private fun iconForMime(mimeType: String?): androidx.compose.ui.graphics.vector.ImageVector {
+    val mime = mimeType?.lowercase() ?: ""
+    return when {
+        mime.startsWith("image/") -> Icons.Rounded.Image
+        mime.startsWith("audio/") -> Icons.Rounded.AudioFile
+        mime.startsWith("video/") -> Icons.Rounded.VideoFile
+        mime == "application/pdf" -> Icons.Rounded.PictureAsPdf
+        else -> Icons.Rounded.Description
+    }
 }
 
 private fun hostOf(url: String): String {
@@ -376,5 +499,20 @@ internal fun formatRelativeTime(visitedAtMillis: Long, now: Long = System.curren
         else -> {
             dateFormatter.get()?.format(Date(visitedAtMillis)).orEmpty()
         }
+    }
+}
+
+/** Formats byte counts into human-readable units (B, KB, MB, GB). */
+internal fun formatFileSize(bytes: Long): String {
+    if (bytes <= 0L) return "0 B"
+    val kb = 1024.0
+    val mb = kb * 1024.0
+    val gb = mb * 1024.0
+    val b = bytes.toDouble()
+    return when {
+        b >= gb -> String.format(Locale.US, "%.1f GB", b / gb)
+        b >= mb -> String.format(Locale.US, "%.1f MB", b / mb)
+        b >= kb -> String.format(Locale.US, "%.1f KB", b / kb)
+        else -> "$bytes B"
     }
 }

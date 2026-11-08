@@ -31,16 +31,26 @@
 
     <string name="library_bookmarks">Bookmarks</string>
     <string name="library_history">History</string>
-    <string name="library_menu_title">Bookmarks and history</string>
-    <string name="library_menu_subtitle">Pages you saved, and pages you visited</string>
+    <string name="library_downloads">Downloads</string>
+    <string name="library_menu_title">Bookmarks, history, and downloads</string>
+    <string name="library_menu_subtitle">Pages you saved, pages you visited, and downloaded files</string>
     <string name="library_clear">Clear</string>
     <string name="library_cancel">Cancel</string>
     <string name="library_remove_bookmark">Remove bookmark</string>
     <string name="library_remove_history">Remove from history</string>
+    <string name="library_remove_download">Remove download</string>
     <string name="library_empty_bookmarks">No bookmarks yet</string>
     <string name="library_empty_bookmarks_hint">Pages you bookmark stay here for one-tap access.</string>
     <string name="library_empty_history">No history yet</string>
     <string name="library_empty_history_hint">Pages you visit appear here, newest first.</string>
+    <string name="library_empty_downloads">No downloads yet</string>
+    <string name="library_empty_downloads_hint">Files you download will appear here.</string>
+    <string name="download_status_downloading">Downloading…</string>
+    <string name="download_status_failed">Download failed</string>
+    <string name="download_status_paused">Download paused</string>
+    <string name="download_cannot_open">No app found to open this file</string>
+    <string name="download_file_not_found">File not available</string>
+    <string name="menu_downloads">Downloads</string>
     <string name="library_clear_history_title">Clear history?</string>
     <string name="library_clear_history_message">Every page in your history will be removed. This cannot be undone.</string>
 

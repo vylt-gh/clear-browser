@@ -2,7 +2,9 @@ package dev.clearbrowser.core.engine
 
 import android.content.Context
 import android.util.Log
+import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.ContentBlocking
+import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.WebExtension
@@ -74,6 +76,7 @@ object ClearGeckoRuntime {
     private fun createRuntime(context: Context): GeckoRuntime {
         val settings = GeckoRuntimeSettings.Builder()
             .aboutConfigEnabled(true)
+            .extensionsWebAPIEnabled(true)
             .contentBlocking(
                 ContentBlocking.Settings.Builder()
                     .enhancedTrackingProtectionLevel(ContentBlocking.EtpLevel.STRICT)
@@ -86,6 +89,43 @@ object ClearGeckoRuntime {
             .build()
 
         val runtime = GeckoRuntime.create(context, settings)
+
+        // Delegate for prompt confirmations during extension installation from AMO or file
+        runtime.webExtensionController.promptDelegate = object : WebExtensionController.PromptDelegate {
+            override fun onInstallPromptRequest(
+                extension: WebExtension,
+                permissions: Array<out String>,
+                origins: Array<out String>,
+                data: Array<out String>,
+            ): GeckoResult<WebExtension.PermissionPromptResponse>? {
+                Log.i(TAG, "Extension install requested: ${extension.id} (${extension.metaData.name})")
+                return GeckoResult.fromValue(
+                    WebExtension.PermissionPromptResponse(
+                        true, // isPermissionsGranted
+                        true, // isPrivateModeGranted
+                        false, // isTechnicalAndInteractionDataGranted
+                    ),
+                )
+            }
+
+            override fun onUpdatePrompt(
+                extension: WebExtension,
+                permissions: Array<out String>,
+                origins: Array<out String>,
+                data: Array<out String>,
+            ): GeckoResult<AllowOrDeny>? {
+                return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+            }
+
+            override fun onOptionalPrompt(
+                extension: WebExtension,
+                permissions: Array<out String>,
+                origins: Array<out String>,
+                data: Array<out String>,
+            ): GeckoResult<AllowOrDeny>? {
+                return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+            }
+        }
 
         // Listen for extension readiness to capture optionsPageUrl / baseUrl
         runtime.webExtensionController.setAddonManagerDelegate(object : WebExtensionController.AddonManagerDelegate {

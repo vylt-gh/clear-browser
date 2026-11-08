@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Search
@@ -138,6 +139,7 @@ fun ChromePopupMenu(
     onDismiss: () -> Unit,
     onBookmarks: () -> Unit,
     onHistory: () -> Unit,
+    onDownloads: () -> Unit = {},
     onExtensions: () -> Unit,
     onFindInPage: () -> Unit,
     onShare: () -> Unit = {},
@@ -233,6 +235,14 @@ fun ChromePopupMenu(
                 onClick = {
                     onDismiss()
                     onHistory()
+                },
+            )
+            PopupMenuItem(
+                icon = Icons.Rounded.Download,
+                label = stringResource(R.string.menu_downloads),
+                onClick = {
+                    onDismiss()
+                    onDownloads()
                 },
             )
             PopupMenuItem(

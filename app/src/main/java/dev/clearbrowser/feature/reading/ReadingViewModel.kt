@@ -172,6 +172,7 @@ class ReadingViewModel(
     private var host: dev.clearbrowser.core.engine.BrowserHost?,
     private val historyStore: HistoryStore? = null,
     private val bookmarkStore: BookmarkStore? = null,
+    private val downloadsStore: dev.clearbrowser.core.data.DownloadsStore? = null,
     private val suggestionsFetcher: dev.clearbrowser.core.data.SearchSuggestionsFetcher = dev.clearbrowser.core.data.DefaultSearchSuggestionsFetcher,
 ) : ViewModel() {
 
@@ -290,6 +291,12 @@ class ReadingViewModel(
 
     private val fallbackBookmarks =
         MutableStateFlow<List<dev.clearbrowser.core.data.Bookmark>>(emptyList())
+
+    val downloads: StateFlow<List<dev.clearbrowser.core.data.DownloadItem>>
+        get() = downloadsStore?.downloads ?: fallbackDownloads
+
+    private val fallbackDownloads =
+        MutableStateFlow<List<dev.clearbrowser.core.data.DownloadItem>>(emptyList())
 
     init {
         viewModelScope.launch {
@@ -1471,6 +1478,9 @@ class ReadingViewModel(
             settingsVisible = false,
             extensionsVisible = false,
         )
+        if (tab == LibraryTab.DOWNLOADS) {
+            refreshDownloads()
+        }
     }
 
     fun closeLibrary() {
@@ -1481,6 +1491,21 @@ class ReadingViewModel(
 
     fun selectLibraryTab(tab: LibraryTab) {
         _state.value = _state.value.copy(libraryTab = tab)
+        if (tab == LibraryTab.DOWNLOADS) {
+            refreshDownloads()
+        }
+    }
+
+    fun refreshDownloads() {
+        viewModelScope.launch {
+            downloadsStore?.refresh()
+        }
+    }
+
+    fun removeDownload(id: Long) {
+        viewModelScope.launch {
+            downloadsStore?.remove(id)
+        }
     }
 
     /** Open a saved page in a new tab and close the sheet. */
@@ -1524,10 +1549,11 @@ class ReadingViewModel(
         private val sessionStore: SessionStore,
         private val historyStore: HistoryStore,
         private val bookmarkStore: BookmarkStore,
+        private val downloadsStore: dev.clearbrowser.core.data.DownloadsStore? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            ReadingViewModel(null, settingsStore, sessionStore, null, historyStore, bookmarkStore) as T
+            ReadingViewModel(null, settingsStore, sessionStore, null, historyStore, bookmarkStore, downloadsStore) as T
     }
 
     private companion object {
