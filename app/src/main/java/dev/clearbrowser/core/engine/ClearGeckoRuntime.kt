@@ -2,6 +2,9 @@ package dev.clearbrowser.core.engine
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.GeckoResult
@@ -9,6 +12,18 @@ import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.WebExtension
 import org.mozilla.geckoview.WebExtensionController
+
+/** Metadata for an installed WebExtension displayed in the UI. */
+data class ExtensionInfo(
+    val id: String,
+    val name: String,
+    val version: String,
+    val description: String,
+    val isBuiltIn: Boolean,
+    val isEnabled: Boolean,
+    val optionsUrl: String?,
+    val baseUrl: String?,
+)
 
 object ClearGeckoRuntime {
     private const val TAG = "ClearGeckoRuntime"
@@ -25,6 +40,57 @@ object ClearGeckoRuntime {
     @Volatile
     var uBlockOptionsUrl: String? = null
         private set
+
+    private val _installedExtensions = MutableStateFlow<List<ExtensionInfo>>(emptyList())
+    val installedExtensions: StateFlow<List<ExtensionInfo>> = _installedExtensions.asStateFlow()
+
+    private val registeredExtensions = mutableMapOf<String, WebExtension>()
+
+    fun getExtension(id: String): WebExtension? = registeredExtensions[id]
+
+    fun getRegisteredExtensions(): Collection<WebExtension> = registeredExtensions.values
+
+    fun listExtensions(runtime: GeckoRuntime? = instance): GeckoResult<List<WebExtension>> {
+        val rt = runtime ?: instance ?: return GeckoResult.fromValue(emptyList())
+        return rt.webExtensionController.list()
+    }
+
+    fun refreshExtensions(runtime: GeckoRuntime? = instance) {
+        val rt = runtime ?: instance ?: return
+        rt.webExtensionController.list().accept(
+            { list ->
+                val items = list?.map { ext ->
+                    registeredExtensions[ext.id] = ext
+                    val optionsUrl = ext.metaData.optionsPageUrl
+                        ?: if (ext.id == UBLOCK_ID) {
+                            ext.metaData.baseUrl.let { if (it.endsWith("/")) "${it}dashboard.html" else "$it/dashboard.html" }
+                        } else null
+
+                    ExtensionInfo(
+                        id = ext.id,
+                        name = ext.metaData.name?.ifBlank { null } ?: if (ext.id == UBLOCK_ID) "uBlock Origin" else ext.id,
+                        version = ext.metaData.version.orEmpty(),
+                        description = ext.metaData.description.orEmpty(),
+                        isBuiltIn = ext.isBuiltIn || ext.id == UBLOCK_ID,
+                        isEnabled = ext.metaData.enabled,
+                        optionsUrl = optionsUrl,
+                        baseUrl = ext.metaData.baseUrl,
+                    )
+                }.orEmpty()
+                _installedExtensions.value = items
+            },
+            { err -> Log.e(TAG, "Failed to refresh extensions", err) },
+        )
+    }
+
+    fun uninstallExtension(id: String) {
+        val rt = instance ?: return
+        val ext = registeredExtensions[id] ?: return
+        rt.webExtensionController.uninstall(ext).accept(
+            { refreshExtensions() },
+            { err -> Log.e(TAG, "Failed to uninstall extension $id", err) },
+        )
+    }
 
     fun get(context: Context): GeckoRuntime {
         return instance ?: synchronized(this) {
@@ -127,10 +193,30 @@ object ClearGeckoRuntime {
             }
         }
 
-        // Listen for extension readiness to capture optionsPageUrl / baseUrl
+        // Listen for extension readiness and install/uninstall events
         runtime.webExtensionController.setAddonManagerDelegate(object : WebExtensionController.AddonManagerDelegate {
+            override fun onInstalled(extension: WebExtension) {
+                Log.i(TAG, "Extension onInstalled: ${extension.id}")
+                refreshExtensions(runtime)
+            }
+
+            override fun onUninstalled(extension: WebExtension) {
+                Log.i(TAG, "Extension onUninstalled: ${extension.id}")
+                registeredExtensions.remove(extension.id)
+                refreshExtensions(runtime)
+            }
+
+            override fun onEnabled(extension: WebExtension) {
+                refreshExtensions(runtime)
+            }
+
+            override fun onDisabled(extension: WebExtension) {
+                refreshExtensions(runtime)
+            }
+
             override fun onReady(extension: WebExtension) {
                 Log.i(TAG, "Extension onReady: ${extension.id}, options=${extension.metaData.optionsPageUrl}, base=${extension.metaData.baseUrl}")
+                registeredExtensions[extension.id] = extension
                 if (extension.id == UBLOCK_ID) {
                     uBlockExtension = extension
                     val url = extension.metaData.optionsPageUrl
@@ -140,6 +226,7 @@ object ClearGeckoRuntime {
                         Log.i(TAG, "uBlock dashboard URL resolved: $url")
                     }
                 }
+                refreshExtensions(runtime)
             }
         })
 
@@ -151,6 +238,7 @@ object ClearGeckoRuntime {
                     Log.i(TAG, "uBlock Origin registered: ${extension?.id}, options=${extension?.metaData?.optionsPageUrl}, base=${extension?.metaData?.baseUrl}")
                     if (extension != null) {
                         uBlockExtension = extension
+                        registeredExtensions[extension.id] = extension
                         runtime.webExtensionController.setAllowedInPrivateBrowsing(extension, true)
                         val url = extension.metaData.optionsPageUrl
                             ?: extension.metaData.baseUrl.let { if (it.endsWith("/")) "${it}dashboard.html" else "$it/dashboard.html" }
@@ -158,6 +246,7 @@ object ClearGeckoRuntime {
                             uBlockOptionsUrl = url
                         }
                     }
+                    refreshExtensions(runtime)
                 },
                 { error ->
                     Log.e(TAG, "Failed to register uBlock Origin", error)

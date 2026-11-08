@@ -93,6 +93,8 @@ data class ReadingUiState(
     val extensionsVisible: Boolean = false,
     /** Active context menu info for long-pressed link/image element. */
     val contextMenu: dev.clearbrowser.core.engine.ContextMenuInfo? = null,
+    /** Active extension popup view session displayed in a sheet. */
+    val extensionPopup: ExtensionPopupState? = null,
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -297,6 +299,9 @@ class ReadingViewModel(
 
     private val fallbackDownloads =
         MutableStateFlow<List<dev.clearbrowser.core.data.DownloadItem>>(emptyList())
+
+    val installedExtensions: StateFlow<List<dev.clearbrowser.core.engine.ExtensionInfo>>
+        get() = ClearGeckoRuntime.installedExtensions
 
     init {
         viewModelScope.launch {
@@ -1014,6 +1019,36 @@ class ReadingViewModel(
         navigate(FIREFOX_EXTENSION_STORE_URL)
     }
 
+    fun openExtensionPopup(extensionId: String) {
+        android.util.Log.i("ClearBrowser", "openExtensionPopup: ext=$extensionId")
+        _state.value = _state.value.copy(
+            extensionsVisible = false,
+            menuPopupVisible = false,
+        )
+        val engine = ensureActiveEngine()
+        android.util.Log.i("ClearBrowser", "openExtensionPopup: engine=$engine")
+        engine?.triggerExtensionAction(extensionId)
+    }
+
+    fun closeExtensionPopup() {
+        _state.value = _state.value.copy(extensionPopup = null)
+    }
+
+    fun openExtensionSettings(url: String) {
+        _state.value = _state.value.copy(
+            extensionsVisible = false,
+            menuPopupVisible = false,
+            settingsVisible = false,
+        )
+        if (url.isNotBlank()) {
+            navigate(url)
+        }
+    }
+
+    fun uninstallExtension(extensionId: String) {
+        dev.clearbrowser.core.engine.ClearGeckoRuntime.uninstallExtension(extensionId)
+    }
+
     fun setOverlay(overlaid: Boolean) {
         if (overlaid) openMenuPopup() else closeMenuPopup()
     }
@@ -1248,6 +1283,20 @@ class ReadingViewModel(
         override fun onContextMenu(info: dev.clearbrowser.core.engine.ContextMenuInfo) {
             if (!isActive) return
             _state.value = _state.value.copy(contextMenu = info)
+        }
+
+        override fun onExtensionPopupRequested(extensionId: String, title: String, session: Any) {
+            android.util.Log.i("ClearBrowser", "onExtensionPopupRequested: ext=$extensionId, title=$title, isActive=$isActive")
+            if (!isActive) return
+            _state.value = _state.value.copy(
+                extensionPopup = ExtensionPopupState(
+                    extensionId = extensionId,
+                    title = title,
+                    session = session as org.mozilla.geckoview.GeckoSession,
+                ),
+                extensionsVisible = false,
+                menuPopupVisible = false,
+            )
         }
     }
 

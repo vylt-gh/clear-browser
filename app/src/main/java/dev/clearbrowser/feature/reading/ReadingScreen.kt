@@ -50,6 +50,7 @@ fun ReadingScreen(
     bookmarks: List<dev.clearbrowser.core.data.Bookmark>,
     history: List<dev.clearbrowser.core.data.HistoryEntry>,
     downloads: List<dev.clearbrowser.core.data.DownloadItem> = emptyList(),
+    installedExtensions: List<dev.clearbrowser.core.engine.ExtensionInfo> = emptyList(),
     attachEngine: (ViewGroup) -> Unit,
     onSystemDarkChange: (Boolean) -> Unit,
     onBack: () -> Unit,
@@ -111,6 +112,10 @@ fun ReadingScreen(
     onDownload: (String) -> Unit = {},
     onOpenUBlockDashboard: () -> Unit = {},
     onOpenExtensionStore: () -> Unit = {},
+    onOpenExtensionPopup: (String) -> Unit = {},
+    onOpenExtensionSettings: (String) -> Unit = {},
+    onUninstallExtension: (String) -> Unit = {},
+    onCloseExtensionPopup: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
@@ -285,9 +290,19 @@ fun ReadingScreen(
 
             if (state.extensionsVisible) {
                 ExtensionsSheet(
+                    extensions = installedExtensions,
                     onDismiss = onCloseExtensions,
-                    onOpenDashboard = onOpenUBlockDashboard,
+                    onOpenPopup = onOpenExtensionPopup,
+                    onOpenSettings = onOpenExtensionSettings,
+                    onUninstall = onUninstallExtension,
                     onOpenExtensionStore = onOpenExtensionStore,
+                )
+            }
+
+            state.extensionPopup?.let { popup ->
+                ExtensionPopupSheet(
+                    popup = popup,
+                    onDismiss = onCloseExtensionPopup,
                 )
             }
 

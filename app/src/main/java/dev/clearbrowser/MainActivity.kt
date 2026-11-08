@@ -179,9 +179,11 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
-        val viewModel = vm ?: return
+        val viewModel = vm
         val action = intent.action
         val command = intent.getStringExtra("command") ?: intent.getStringExtra("action")
+        android.util.Log.i("ClearBrowser", "handleIntent: command=$command, action=$action, vm=$viewModel")
+        if (viewModel == null) return
 
         when {
             command == "find" || action == "dev.clearbrowser.ACTION_FIND" -> {
@@ -214,6 +216,9 @@ class MainActivity : ComponentActivity() {
             }
             command == "ubo" || command == "ublock" || command == "dashboard" || action == "dev.clearbrowser.ACTION_UBO" -> {
                 viewModel.openUBlockDashboard()
+            }
+            command == "extension_popup" || command == "ubo_popup" || action == "dev.clearbrowser.ACTION_EXTENSION_POPUP" -> {
+                viewModel.openExtensionPopup(dev.clearbrowser.core.engine.ClearGeckoRuntime.UBLOCK_ID)
             }
             command == "extension_store" || command == "amo" || action == "dev.clearbrowser.ACTION_EXTENSION_STORE" -> {
                 viewModel.openExtensionStore()
@@ -346,6 +351,7 @@ class MainActivity : ComponentActivity() {
         val historyEntries by viewModel.history.collectAsStateWithLifecycle()
         val bookmarkEntries by viewModel.bookmarks.collectAsStateWithLifecycle()
         val downloadEntries by viewModel.downloads.collectAsStateWithLifecycle()
+        val installedExtensions by viewModel.installedExtensions.collectAsStateWithLifecycle()
 
         // Recorded before the engine attaches, so the very first load is the
         // requested page rather than a detour through the start page.
@@ -403,6 +409,7 @@ class MainActivity : ComponentActivity() {
                 // Popup menu from button
                 state.menuPopupVisible -> viewModel.closeMenuPopup()
                 // Dedicated sheets
+                state.extensionPopup != null -> viewModel.closeExtensionPopup()
                 state.settingsVisible -> viewModel.closeSettings()
                 state.extensionsVisible -> viewModel.closeExtensions()
                 // The sheets are the next thing to go: a back gesture while a
@@ -421,6 +428,7 @@ class MainActivity : ComponentActivity() {
             bookmarks = bookmarkEntries,
             history = historyEntries,
             downloads = downloadEntries,
+            installedExtensions = installedExtensions,
             attachEngine = { parent -> viewModel.attach(parent, this, host) },
             onSystemDarkChange = viewModel::setSystemDark,
             onBack = viewModel::goBack,
@@ -435,6 +443,10 @@ class MainActivity : ComponentActivity() {
             onRemoveDownload = viewModel::removeDownload,
             onOpenExtensions = viewModel::openExtensions,
             onCloseExtensions = viewModel::closeExtensions,
+            onOpenExtensionPopup = viewModel::openExtensionPopup,
+            onOpenExtensionSettings = viewModel::openExtensionSettings,
+            onUninstallExtension = viewModel::uninstallExtension,
+            onCloseExtensionPopup = viewModel::closeExtensionPopup,
             onOpenSettings = viewModel::openSettings,
             onCloseSettings = viewModel::closeSettings,
             onClearBrowsingData = { h, c, k ->

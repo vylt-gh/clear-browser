@@ -15,6 +15,7 @@ class ReadingUiStateTest {
         assertFalse(state.menuPopupVisible)
         assertFalse(state.settingsVisible)
         assertFalse(state.extensionsVisible)
+        org.junit.Assert.assertNull(state.extensionPopup)
         assertEquals("", state.findQuery)
         assertEquals(0, state.findActiveMatch)
         assertEquals(0, state.findTotalMatches)

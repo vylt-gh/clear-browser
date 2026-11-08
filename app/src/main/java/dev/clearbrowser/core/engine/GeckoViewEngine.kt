@@ -16,6 +16,7 @@ import org.mozilla.geckoview.GeckoSessionSettings
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.ScreenLength
 import org.mozilla.geckoview.StorageController
+import org.mozilla.geckoview.WebExtension
 import org.mozilla.geckoview.WebResponse
 
 /**
@@ -81,6 +82,82 @@ class GeckoViewEngine(
         session = GeckoSession(settings)
         installDelegates()
         session.open(runtime)
+        installExtensionActionDelegates()
+    }
+
+    private val extensionActions = mutableMapOf<String, WebExtension.Action>()
+
+    private fun createActionDelegate(ext: WebExtension): WebExtension.ActionDelegate {
+        return object : WebExtension.ActionDelegate {
+            override fun onBrowserAction(
+                extension: WebExtension,
+                session: GeckoSession?,
+                action: WebExtension.Action,
+            ) {
+                android.util.Log.i("ClearBrowser", "onBrowserAction: ext=${extension.id}, action=$action")
+                extensionActions[extension.id] = action
+            }
+
+            override fun onPageAction(
+                extension: WebExtension,
+                session: GeckoSession?,
+                action: WebExtension.Action,
+            ) {
+                android.util.Log.i("ClearBrowser", "onPageAction: ext=${extension.id}, action=$action")
+                extensionActions[extension.id] = action
+            }
+
+            override fun onOpenPopup(
+                extension: WebExtension,
+                action: WebExtension.Action,
+            ): GeckoResult<GeckoSession>? {
+                android.util.Log.i("ClearBrowser", "onOpenPopup: ext=${extension.id}")
+                return createAndNotifyPopupSession(extension)
+            }
+
+            override fun onTogglePopup(
+                extension: WebExtension,
+                action: WebExtension.Action,
+            ): GeckoResult<GeckoSession>? {
+                android.util.Log.i("ClearBrowser", "onTogglePopup: ext=${extension.id}")
+                return onOpenPopup(extension, action)
+            }
+        }
+    }
+
+    private fun createAndNotifyPopupSession(extension: WebExtension): GeckoResult<GeckoSession> {
+        val popupSettings = GeckoSessionSettings.Builder()
+            .usePrivateMode(session.settings.usePrivateMode)
+            .contextId(session.settings.contextId)
+            .build()
+        val popupSession = GeckoSession(popupSettings)
+        popupSession.open(runtime)
+        mainHandler.post {
+            listener.onExtensionPopupRequested(
+                extension.id,
+                extension.metaData.name.orEmpty().ifBlank { "Extension" },
+                popupSession,
+            )
+        }
+        return GeckoResult.fromValue(popupSession)
+    }
+
+    private fun installExtensionActionDelegates() {
+        ClearGeckoRuntime.getRegisteredExtensions().forEach { ext ->
+            val delegate = createActionDelegate(ext)
+            ext.setActionDelegate(delegate)
+            session.webExtensionController.setActionDelegate(ext, delegate)
+        }
+        ClearGeckoRuntime.listExtensions(runtime).accept(
+            { extensions ->
+                extensions?.forEach { ext ->
+                    val delegate = createActionDelegate(ext)
+                    ext.setActionDelegate(delegate)
+                    session.webExtensionController.setActionDelegate(ext, delegate)
+                }
+            },
+            { err -> android.util.Log.w("GeckoViewEngine", "Failed to list extensions for delegates", err) },
+        )
     }
 
     private fun installDelegates() {
@@ -473,6 +550,9 @@ class GeckoViewEngine(
             ),
         )
         geckoView.setSession(session)
+        if (active && session.isOpen) {
+            runtime.webExtensionController.setTabActive(session, true)
+        }
         mainHandler.postDelayed({ topBarSampler.sample(geckoView, currentUrlString) }, 200)
     }
 
@@ -572,6 +652,9 @@ class GeckoViewEngine(
         if (this.active == active) return
         this.active = active
         session.setActive(active)
+        if (session.isOpen) {
+            runtime.webExtensionController.setTabActive(session, active)
+        }
     }
 
     override fun destroy() {
@@ -622,6 +705,45 @@ class GeckoViewEngine(
         session.finder.clear()
         mainHandler.post {
             listener.onFindResult(activeMatch = 0, totalMatches = 0)
+        }
+    }
+
+    override fun triggerExtensionAction(extensionId: String) {
+        if (session.isOpen) {
+            runtime.webExtensionController.setTabActive(session, true)
+        }
+        val action = extensionActions[extensionId]
+        if (action != null) {
+            android.util.Log.i("ClearBrowser", "triggerExtensionAction: clicking action for $extensionId")
+            action.click()
+        } else {
+            android.util.Log.i("ClearBrowser", "triggerExtensionAction: action null for $extensionId, fallback")
+            val ext = ClearGeckoRuntime.getExtension(extensionId)
+            if (ext != null) {
+                val delegate = createActionDelegate(ext)
+                ext.setActionDelegate(delegate)
+                session.webExtensionController.setActionDelegate(ext, delegate)
+            }
+            val baseUrl = ext?.metaData?.baseUrl ?: return
+            val popupUrl = if (extensionId == ClearGeckoRuntime.UBLOCK_ID) {
+                if (baseUrl.endsWith("/")) "${baseUrl}popup-fenix.html" else "$baseUrl/popup-fenix.html"
+            } else {
+                if (baseUrl.endsWith("/")) "${baseUrl}popup.html" else "$baseUrl/popup.html"
+            }
+            val popupSettings = GeckoSessionSettings.Builder()
+                .usePrivateMode(session.settings.usePrivateMode)
+                .contextId(session.settings.contextId)
+                .build()
+            val popupSession = GeckoSession(popupSettings)
+            popupSession.open(runtime)
+            popupSession.loadUri(popupUrl)
+            mainHandler.post {
+                listener.onExtensionPopupRequested(
+                    extensionId,
+                    ext.metaData.name.orEmpty().ifBlank { "Extension" },
+                    popupSession,
+                )
+            }
         }
     }
 
