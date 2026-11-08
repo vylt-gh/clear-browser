@@ -13,13 +13,14 @@
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
   <img src="https://img.shields.io/badge/Tests-110%20passing-success" alt="Tests: 110 passing" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat" alt="License: MIT" />
 </p>
 
 ---
 
 **Clear** is an uncluttered, reading-first web browser for Android. Built with **Kotlin**, **Jetpack Compose**, **Material 3 Expressive**, and powered by **Mozilla GeckoView**, Clear bundles **uBlock Origin Manifest V2 (MV2)** to eliminate ads, trackers, and page clutter before they ever reach your screen.
 
-The web page is the content; the chrome is just the tool. When you scroll to read, the interface gracefully retreats into a minimal handle. When you need it, one tap or upward flick brings back full navigation.
+The web page is the content; the chrome is just the tool. When you scroll down to read, the interface gracefully retreats into a minimal corner handle (or fades completely off-screen with "Hide handle when reading"). When you need it, tapping the handle, scrolling upward, reaching the page top, or using the back gesture brings back full navigation controls instantly.
 
 ---
 
@@ -43,13 +44,13 @@ The web page is the content; the chrome is just the tool. When you scroll to rea
 ## Core Philosophy
 
 1. **Content First, Chrome Second**  
-   Modern mobile browsers occupy valuable screen real estate with persistent multi-row toolbars, shopping widgets, and recommendation tiles. Clear treats the document as the primary experience: the omnibox and navigation controls auto-hide during reading and animate into a subtle floating handle.
+   Modern mobile browsers occupy valuable screen real estate with persistent multi-row toolbars, shopping widgets, and recommendation tiles. Clear treats the document as the primary experience: the omnibox and navigation controls auto-hide during reading and animate into a subtle floating corner handle (or retreat completely off-screen when "Hide handle when reading" is enabled). Tapping the handle, scrolling upward, reaching the page top, or using the Android back gesture instantly restores full controls.
 2. **Resource-Respecting Architecture**  
    Traditional browsers often keep dozens of browser engine compositor instances running concurrently in the background, consuming hundreds of megabytes of RAM and draining battery. Clear maintains **only one active attached GeckoView instance** in the view hierarchy at a time. Inactive tabs are detached, paused, and restored on-demand.
 3. **Hard Isolation for Privacy**  
    Private browsing should be a security guarantee, not a cleanup promise. Clear's Incognito mode uses dedicated ephemeral `GeckoSession` instances (`usePrivateMode(true)`) with isolated in-memory cookie jars, cache, and storage. Private sessions never write to disk and are completely purged when finished.
 4. **Local-First & Transparent**  
-   No external sync accounts, no telemetry, no tracking. History and bookmarks are stored directly on-device in atomic human-readable JSON files with atomic rename operations.
+   No external sync accounts, no telemetry, and no diagnostic tracking by Clear. History and bookmarks are stored strictly on-device in atomic human-readable JSON files with atomic rename operations. When you search or navigate via the address bar, queries are sent directly from your device to your chosen search engine (Kagi by default, or DuckDuckGo, Brave, Google, etc.) with no intermediary proxy or logging servers.
 
 ---
 
@@ -154,7 +155,10 @@ flowchart TD
 
     RS --> RVM
     BC --> RVM
-    CMS --> RVM
+    FIPB --> RVM
+    CPM --> RVM
+    SS --> RVM
+    ES --> RVM
     TS --> RVM
     LS --> RVM
     RVM --> CoreEngine
@@ -264,7 +268,7 @@ clear-browser/
 
 ### Prerequisites
 - **JDK 17** or **JDK 21**
-- **Android SDK** with platform 37 installed (`compileSdk = 37`, `minSdk = 26`)
+- **Android SDK** with platform 37 installed (`compileSdk = 37`, `compileSdkMinor = 2`, `minSdk = 26`)
 
 ### Commands
 
@@ -316,4 +320,4 @@ This project was developed with the assistance of AI coding agents (specifically
 
 ## License
 
-This project is licensed under the terms described in the repository. See project commits for details.
+This project is open-source software licensed under the [MIT License](LICENSE).
