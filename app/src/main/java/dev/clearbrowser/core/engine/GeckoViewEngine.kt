@@ -177,7 +177,6 @@ class GeckoViewEngine(
             }
 
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
-                android.util.Log.i("ClearBrowser", "onCanGoBack: $canGoBack, navDepth=$navigationDepth")
                 currentCanGoBack = canGoBack
                 if (canGoBack) {
                     navigationDepth = navigationDepth.coerceAtLeast(1)

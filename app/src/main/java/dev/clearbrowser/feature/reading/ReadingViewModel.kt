@@ -750,10 +750,7 @@ class ReadingViewModel(
         if (_state.value.isLoading) engine.stop() else engine.reload()
     }
 
-    fun canGoBack(): Boolean {
-        val engine = engineForActive()
-        return (engine != null && engine.canGoBack()) || _state.value.canGoBack
-    }
+    fun canGoBack(): Boolean = !_state.value.isStartPage
 
     fun canGoForward(): Boolean {
         val engine = engineForActive()
@@ -761,19 +758,44 @@ class ReadingViewModel(
     }
 
     fun goBack(): Boolean {
+        if (_state.value.isStartPage) return false
         val engine = engineForActive()
         val canBack = (engine?.canGoBack() == true) || _state.value.canGoBack
-        android.util.Log.i("ClearBrowser", "ReadingViewModel.goBack: engine=$engine, canBack=$canBack")
         if (engine != null && canBack) {
             revealChrome()
             engine.goBack()
             _state.value = _state.value.copy(
+                chromeMode = ChromeMode.SUMMONED,
                 canGoBack = engine.canGoBack(),
                 canGoForward = engine.canGoForward(),
             )
             return true
         }
-        return false
+        goToStartPage()
+        return true
+    }
+
+    fun goToStartPage() {
+        val tab = strip.active ?: return
+        engines.remove(tab.id)?.let { runCatching { it.destroy() } }
+        strip.update(tab.id) { it.copy(url = ABOUT_BLANK, title = "", scrollY = 0) }
+        pendingScroll.remove(tab.id)
+        lastHeight.remove(tab.id)
+        ensureActiveEngine()
+        revealChrome()
+        _state.value = _state.value.copy(
+            url = ABOUT_BLANK,
+            title = "",
+            loadState = LoadState.IDLE,
+            secure = true,
+            canGoBack = false,
+            canGoForward = false,
+            scrollAtTop = true,
+            topBarColor = null,
+            isTopBarLight = !isSystemDark,
+            chromeMode = ChromeMode.SUMMONED,
+            tabs = strip.summaries(),
+        )
     }
 
     fun goForward(): Boolean {

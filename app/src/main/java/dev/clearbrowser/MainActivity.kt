@@ -400,7 +400,6 @@ class MainActivity : ComponentActivity() {
         // Android browsers annoy people.
         BackHandler(enabled = true) {
             val canBack = viewModel.canGoBack()
-            android.util.Log.i("ClearBrowser", "BackHandler pressed: canGoBack=$canBack, state.canGoBack=${state.canGoBack}, chromeMode=${state.chromeMode}")
             when {
                 // Fullscreen video / element is highest priority to exit on back press.
                 state.isFullscreen -> viewModel.exitFullScreen()
@@ -421,10 +420,7 @@ class MainActivity : ComponentActivity() {
                 state.chromeMode == ChromeMode.EXPANDED -> viewModel.collapseOmnibox()
                 canBack && viewModel.goBack() -> Unit
                 state.chromeMode == ChromeMode.READING -> viewModel.toggleChrome()
-                else -> {
-                    android.util.Log.i("ClearBrowser", "BackHandler: finishing activity")
-                    finish()
-                }
+                else -> finish()
             }
         }
 

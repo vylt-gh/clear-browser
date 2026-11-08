@@ -428,7 +428,8 @@ private fun CompactBar(
                 onCollapse = onCollapseOmnibox,
             )
         } else {
-            IconButton(onClick = onBack, enabled = state.canGoBack) {
+            val canBack = !state.isStartPage
+            IconButton(onClick = onBack, enabled = canBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = stringResource(R.string.chrome_back),
