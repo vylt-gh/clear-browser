@@ -6,13 +6,13 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat&logo=android&logoColor=white" alt="Platform: Android" />
-  <img src="https://img.shields.io/badge/Release-v0.5.0-blue?style=flat&logo=github" alt="Release: v0.5.0" />
+  <img src="https://img.shields.io/badge/Release-v0.6.0-blue?style=flat&logo=github" alt="Release: v0.6.0" />
   <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=kotlin&logoColor=white" alt="Kotlin 2.3.20" />
   <img src="https://img.shields.io/badge/Engine-Mozilla%20GeckoView-FF7139?style=flat&logo=firefox&logoColor=white" alt="Engine: Mozilla GeckoView" />
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-92%20passing-success" alt="Tests: 92 passing" />
+  <img src="https://img.shields.io/badge/Tests-97%20passing-success" alt="Tests: 97 passing" />
 </p>
 
 ---
@@ -189,7 +189,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 92 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 97 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records
@@ -201,7 +201,14 @@ clear-browser/
 
 ## Releases & Changelog
 
-### v0.5.0 (Latest)
+### v0.6.0 (Latest)
+- **Share Page & Copy Link**: Added quick sharing via Android standard `ACTION_SEND` chooser and one-tap link copying directly in the anchored popup menu.
+- **Granular Clear Browsing Data**: Interactive clearing dialog with selectable checkboxes for browsing history, cookies/site data, and cached web content.
+- **Web Text Scaling & Zoom**: Dynamically scale web text sizes (`80%`, `100%`, `125%`, `150%`) across all websites via GeckoView's font size factor.
+- **Native Site Permission Prompts**: Prompts for web geolocation, desktop notifications, persistent storage, camera, and microphone permissions.
+- **Long-Press Context Menu**: Long-pressing links or images opens a bottom sheet with preview card, "Open in new tab", "Copy link/image address", "Share link", and "Download image".
+
+### v0.5.0
 - **Anchored Popup Bubble Menu**: Overflow action menu redesigned as an anchored speech-bubble popup emerging directly above the `⋮` button, matching tactile native ergonomics.
 - **Dedicated Settings & Extensions Sheets**: Cleanly organized modal bottom sheets for browser preferences and extension controls.
 - **uBlock Origin Dashboard Launcher**: Full WebExtension routing for `moz-extension://` internal schemes, allowing one-tap launching and configuration of uBlock Origin's dashboard and custom filter lists directly in-browser.
