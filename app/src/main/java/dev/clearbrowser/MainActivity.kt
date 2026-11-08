@@ -129,7 +129,19 @@ class MainActivity : ComponentActivity() {
                 viewModel.closeFindInPage()
             }
             command == "menu" || action == "dev.clearbrowser.ACTION_MENU" -> {
-                viewModel.setOverlay(true)
+                viewModel.toggleMenuPopup()
+            }
+            command == "settings" || action == "dev.clearbrowser.ACTION_SETTINGS" -> {
+                viewModel.openSettings()
+            }
+            command == "extensions" || action == "dev.clearbrowser.ACTION_EXTENSIONS" -> {
+                viewModel.openExtensions()
+            }
+            command == "bookmarks" || action == "dev.clearbrowser.ACTION_BOOKMARKS" -> {
+                viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.BOOKMARKS)
+            }
+            command == "history" || action == "dev.clearbrowser.ACTION_HISTORY" -> {
+                viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.HISTORY)
             }
             command == "tabs" || action == "dev.clearbrowser.ACTION_TABS" -> {
                 viewModel.openTabs()
@@ -257,6 +269,11 @@ class MainActivity : ComponentActivity() {
                 state.isFullscreen -> viewModel.exitFullScreen()
                 // Find in page is dismissed before sheet/history navigation.
                 state.findInPageVisible -> viewModel.closeFindInPage()
+                // Popup menu from button
+                state.menuPopupVisible -> viewModel.closeMenuPopup()
+                // Dedicated sheets
+                state.settingsVisible -> viewModel.closeSettings()
+                state.extensionsVisible -> viewModel.closeExtensions()
                 // The sheets are the next thing to go: a back gesture while a
                 // sheet is open means "close this", never "leave the page".
                 state.libraryTab != null -> viewModel.closeLibrary()
@@ -277,7 +294,15 @@ class MainActivity : ComponentActivity() {
             onBack = viewModel::goBack,
             onReload = viewModel::reloadOrStop,
             onStop = viewModel::reloadOrStop,
-            onMenu = { viewModel.setOverlay(true) },
+            onMenu = viewModel::toggleMenuPopup,
+            onCloseMenuPopup = viewModel::closeMenuPopup,
+            onOpenBookmarks = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.BOOKMARKS) },
+            onOpenHistory = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.HISTORY) },
+            onOpenExtensions = viewModel::openExtensions,
+            onCloseExtensions = viewModel::closeExtensions,
+            onOpenSettings = viewModel::openSettings,
+            onCloseSettings = viewModel::closeSettings,
+            onClearBrowsingData = viewModel::clearBrowsingData,
             onOpenTabs = viewModel::openTabs,
             onSelectTab = { id ->
                 // Selecting is also dismissing: the user picked a page to look

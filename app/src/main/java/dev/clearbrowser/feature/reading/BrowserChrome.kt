@@ -72,6 +72,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.BrowserSettings
 import dev.clearbrowser.core.data.ChromePosition
@@ -131,6 +133,13 @@ fun ChromeSurface(
      */
     onBoundsChanged: (android.graphics.RectF?) -> Unit,
     onQueryChange: (String) -> Unit = {},
+    onDismissMenuPopup: () -> Unit = {},
+    onBookmarks: () -> Unit = {},
+    onHistory: () -> Unit = {},
+    onExtensions: () -> Unit = {},
+    onFindInPage: () -> Unit = {},
+    onSettings: () -> Unit = {},
+    onToggleBookmark: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val collapsed = state.chromeMode == ChromeMode.READING
@@ -259,6 +268,13 @@ fun ChromeSurface(
                         onExpandOmnibox = onExpandOmnibox,
                         onNavigate = onNavigate,
                         onCollapseOmnibox = onCollapseOmnibox,
+                        onDismissMenuPopup = onDismissMenuPopup,
+                        onBookmarks = onBookmarks,
+                        onHistory = onHistory,
+                        onExtensions = onExtensions,
+                        onFindInPage = onFindInPage,
+                        onSettings = onSettings,
+                        onToggleBookmark = onToggleBookmark,
                         modifier = Modifier.graphicsLayer { alpha = ((progress - 0.5f) * 2f).coerceIn(0f, 1f) },
                     )
                 } else {
@@ -305,6 +321,13 @@ private fun CompactBar(
     onExpandOmnibox: () -> Unit,
     onNavigate: (String) -> Unit,
     onCollapseOmnibox: () -> Unit,
+    onDismissMenuPopup: () -> Unit = {},
+    onBookmarks: () -> Unit = {},
+    onHistory: () -> Unit = {},
+    onExtensions: () -> Unit = {},
+    onFindInPage: () -> Unit = {},
+    onSettings: () -> Unit = {},
+    onToggleBookmark: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -401,11 +424,34 @@ private fun CompactBar(
                 )
             }
 
-            IconButton(onClick = onMenu) {
-                Icon(
-                    imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = stringResource(R.string.chrome_menu),
-                )
+            Box {
+                IconButton(onClick = onMenu) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        contentDescription = stringResource(R.string.chrome_menu),
+                    )
+                }
+
+                if (state.menuPopupVisible) {
+                    Popup(
+                        popupPositionProvider = ChromePopupPositionProvider(LocalDensity.current),
+                        onDismissRequest = onDismissMenuPopup,
+                        properties = PopupProperties(focusable = true),
+                    ) {
+                        ChromePopupMenu(
+                            visible = true,
+                            canBookmark = state.canBookmark,
+                            isBookmarked = state.isBookmarked,
+                            onToggleBookmark = onToggleBookmark,
+                            onDismiss = onDismissMenuPopup,
+                            onBookmarks = onBookmarks,
+                            onHistory = onHistory,
+                            onExtensions = onExtensions,
+                            onFindInPage = onFindInPage,
+                            onSettings = onSettings,
+                        )
+                    }
+                }
             }
         }
 

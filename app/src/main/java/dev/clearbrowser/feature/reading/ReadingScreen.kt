@@ -88,6 +88,14 @@ fun ReadingScreen(
     onFindQueryChange: (String) -> Unit = {},
     onFindNext: () -> Unit = {},
     onFindPrevious: () -> Unit = {},
+    onCloseMenuPopup: () -> Unit = {},
+    onOpenBookmarks: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
+    onOpenExtensions: () -> Unit = {},
+    onCloseExtensions: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
+    onCloseSettings: () -> Unit = {},
+    onClearBrowsingData: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
@@ -184,6 +192,13 @@ fun ReadingScreen(
                     onReveal = onToggleChrome,
                     onBoundsChanged = onChromeBounds,
                     onQueryChange = onOmniboxQueryChange,
+                    onDismissMenuPopup = onCloseMenuPopup,
+                    onBookmarks = onOpenBookmarks,
+                    onHistory = onOpenHistory,
+                    onExtensions = onOpenExtensions,
+                    onFindInPage = onOpenFindInPage,
+                    onSettings = onOpenSettings,
+                    onToggleBookmark = onToggleBookmark,
                     // The bottom edge is the whole design: the thumb should not have
                     // to reach past the content to find the controls.
                     modifier = Modifier.align(Alignment.BottomCenter),
@@ -230,14 +245,11 @@ fun ReadingScreen(
                 )
             }
 
-            if (state.chromeMode == ChromeMode.OVERLAID) {
-                ChromeMenuSheet(
+            if (state.settingsVisible) {
+                SettingsSheet(
                     state = state,
-                    // Read from the state rather than a local `remember`, which
-                    // a rotation would reset to false while the engines kept
-                    // the desktop user agent.
                     desktopSiteEnabled = state.desktopSite,
-                    onDismiss = onCollapseOmnibox,
+                    onDismiss = onCloseSettings,
                     onChromePositionChange = onChromePositionChange,
                     onSearchEngineChange = onSearchEngineChange,
                     onAutoHideChange = onAutoHideChange,
@@ -246,11 +258,17 @@ fun ReadingScreen(
                     onImmersiveChange = onImmersiveChange,
                     onIncognitoChange = onIncognitoChange,
                     onWebThemeChange = onWebThemeChange,
-                    onOpenFindInPage = onOpenFindInPage,
-                    canBookmark = state.canBookmark,
-                    isBookmarked = state.isBookmarked,
-                    onToggleBookmark = onToggleBookmark,
-                    onOpenLibrary = onOpenLibrary,
+                    onClearBrowsingData = onClearBrowsingData,
+                )
+            }
+
+            if (state.extensionsVisible) {
+                ExtensionsSheet(
+                    onDismiss = onCloseExtensions,
+                    onOpenUrl = { url ->
+                        onCloseExtensions()
+                        onNavigate(url)
+                    },
                 )
             }
 

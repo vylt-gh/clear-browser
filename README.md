@@ -121,7 +121,9 @@ flowchart TD
         RS[ReadingScreen]
         BC[BrowserChrome - Unified Morphing Surface]
         FIPB[FindInPageBar - In-Page Search]
-        CMS[ChromeMenuSheet]
+        CPM[ChromePopupMenu - Anchored Speech Bubble]
+        SS[SettingsSheet - Full Browser Configuration]
+        ES[ExtensionsSheet - uBlock Origin MV2]
         TS[TabsSheet]
         LS[LibrarySheet]
         SP[StartPage]
@@ -187,7 +189,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 89 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 91 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records

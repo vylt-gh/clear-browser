@@ -84,6 +84,12 @@ data class ReadingUiState(
     val findActiveMatch: Int = 0,
     /** Total number of matches found on the page. */
     val findTotalMatches: Int = 0,
+    /** Whether the popup action menu from the three-dots button is open. */
+    val menuPopupVisible: Boolean = false,
+    /** Whether the full settings bottom sheet is open. */
+    val settingsVisible: Boolean = false,
+    /** Whether the extensions management sheet is open. */
+    val extensionsVisible: Boolean = false,
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -470,6 +476,9 @@ class ReadingViewModel(
             // Only one sheet can be up at a time; opening this one closes the
             // library rather than stacking a second modal sheet on it.
             libraryTab = null,
+            menuPopupVisible = false,
+            settingsVisible = false,
+            extensionsVisible = false,
         )
     }
 
@@ -781,6 +790,9 @@ class ReadingViewModel(
             findQuery = "",
             findActiveMatch = 0,
             findTotalMatches = 0,
+            menuPopupVisible = false,
+            settingsVisible = false,
+            extensionsVisible = false,
         )
     }
 
@@ -884,20 +896,63 @@ class ReadingViewModel(
      * sheets, and whichever opened second would hide the first while the state
      * claimed both were up.
      */
-    fun setOverlay(overlaid: Boolean) {
-        val current = _state.value.chromeMode
-        when {
-            overlaid && current != ChromeMode.EXPANDED ->
-                _state.value = _state.value.copy(
-                    chromeMode = ChromeMode.OVERLAID,
-                    tabsVisible = false,
-                    // The same rule as the switcher: the menu and the library are
-                    // both full sheets, so the menu opening closes the library.
-                    libraryTab = null,
-                )
-            !overlaid && current == ChromeMode.OVERLAID ->
-                _state.value = _state.value.copy(chromeMode = ChromeMode.SUMMONED)
+    fun toggleMenuPopup() {
+        val current = _state.value.menuPopupVisible
+        _state.value = _state.value.copy(
+            menuPopupVisible = !current,
+            settingsVisible = false,
+            extensionsVisible = false,
+        )
+    }
+
+    fun openMenuPopup() {
+        _state.value = _state.value.copy(
+            menuPopupVisible = true,
+            settingsVisible = false,
+            extensionsVisible = false,
+        )
+    }
+
+    fun closeMenuPopup() {
+        if (_state.value.menuPopupVisible) {
+            _state.value = _state.value.copy(menuPopupVisible = false)
         }
+    }
+
+    fun openSettings() {
+        _state.value = _state.value.copy(
+            settingsVisible = true,
+            menuPopupVisible = false,
+            extensionsVisible = false,
+            libraryTab = null,
+            tabsVisible = false,
+        )
+    }
+
+    fun closeSettings() {
+        if (_state.value.settingsVisible) {
+            _state.value = _state.value.copy(settingsVisible = false)
+        }
+    }
+
+    fun openExtensions() {
+        _state.value = _state.value.copy(
+            extensionsVisible = true,
+            menuPopupVisible = false,
+            settingsVisible = false,
+            libraryTab = null,
+            tabsVisible = false,
+        )
+    }
+
+    fun closeExtensions() {
+        if (_state.value.extensionsVisible) {
+            _state.value = _state.value.copy(extensionsVisible = false)
+        }
+    }
+
+    fun setOverlay(overlaid: Boolean) {
+        if (overlaid) openMenuPopup() else closeMenuPopup()
     }
 
     // --------------------------------------------------------- EngineListener
@@ -1351,6 +1406,9 @@ class ReadingViewModel(
             libraryTab = tab,
             chromeMode = ChromeMode.SUMMONED,
             tabsVisible = false,
+            menuPopupVisible = false,
+            settingsVisible = false,
+            extensionsVisible = false,
         )
     }
 

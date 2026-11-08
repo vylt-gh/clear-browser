@@ -12,9 +12,28 @@ class ReadingUiStateTest {
         val state = ReadingUiState()
         assertFalse(state.isFullscreen)
         assertFalse(state.findInPageVisible)
+        assertFalse(state.menuPopupVisible)
+        assertFalse(state.settingsVisible)
+        assertFalse(state.extensionsVisible)
         assertEquals("", state.findQuery)
         assertEquals(0, state.findActiveMatch)
         assertEquals(0, state.findTotalMatches)
+    }
+
+    @Test
+    fun menuPopupAndSheetsCanBeUpdated() {
+        val popupState = ReadingUiState().copy(menuPopupVisible = true)
+        assertTrue(popupState.menuPopupVisible)
+        assertFalse(popupState.settingsVisible)
+        assertFalse(popupState.extensionsVisible)
+
+        val settingsState = ReadingUiState().copy(settingsVisible = true)
+        assertTrue(settingsState.settingsVisible)
+        assertFalse(settingsState.menuPopupVisible)
+
+        val extensionsState = ReadingUiState().copy(extensionsVisible = true)
+        assertTrue(extensionsState.extensionsVisible)
+        assertFalse(extensionsState.menuPopupVisible)
     }
 
     @Test
