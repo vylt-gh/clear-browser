@@ -82,6 +82,7 @@ import dev.clearbrowser.core.data.ChromeTheme
 import dev.clearbrowser.core.data.SearchSuggestion
 import dev.clearbrowser.core.theme.chromeFadeSpec
 import dev.clearbrowser.core.theme.chromeMorphSpring
+import dev.clearbrowser.core.theme.lerpDp
 
 internal fun resolveIsDark(appTheme: AppTheme, systemDark: Boolean): Boolean = when (appTheme) {
     AppTheme.SYSTEM -> systemDark
@@ -883,6 +884,3 @@ private val HANDLE_SIZE: Dp = 56.dp
 
 /** Inset from the screen edge, applied in both states. */
 private val HANDLE_MARGIN: Dp = 12.dp
-
-private fun lerpDp(start: Dp, end: Dp, fraction: Float): Dp =
-    start + (end - start) * fraction.coerceIn(0f, 1f)

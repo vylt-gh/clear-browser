@@ -5,7 +5,9 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 
 /**
  * Animation specs for the browser chrome.
@@ -90,3 +92,8 @@ fun fastSpring(): FiniteAnimationSpec<IntOffset> = spring(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = 900f,
 )
+
+/** Linearly interpolates between two [Dp] values based on [fraction]. */
+fun lerpDp(start: Dp, end: Dp, fraction: Float): Dp =
+    start + (end - start) * fraction.coerceIn(0f, 1f)
+

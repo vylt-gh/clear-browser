@@ -1,20 +1,20 @@
 package dev.clearbrowser.feature.onboarding
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -75,16 +75,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.AppTheme
 import dev.clearbrowser.core.data.BrowserSettings
 import dev.clearbrowser.core.data.ChromePosition
 import dev.clearbrowser.core.data.ChromeTheme
 import dev.clearbrowser.core.data.SearchEngine
+import dev.clearbrowser.core.theme.chromeMorphSpring
+import dev.clearbrowser.core.theme.lerpDp
 import dev.clearbrowser.feature.reading.rememberFrostedGlassBrushes
 import dev.clearbrowser.feature.reading.resolveIsDark
 import kotlinx.coroutines.launch
@@ -568,6 +574,12 @@ private fun DummyChromePreview(
     val isDark = resolveIsDark(appTheme, isSystemInDarkTheme())
     val colorScheme = MaterialTheme.colorScheme
 
+    val progress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = chromeMorphSpring(),
+        label = "dummy_chrome_morph",
+    )
+
     val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
     val acrylicBackground = remember(colorScheme) {
         Brush.verticalGradient(
@@ -599,7 +611,14 @@ private fun DummyChromePreview(
             .padding(12.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    isExpanded = !isExpanded
+                },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -609,7 +628,11 @@ private fun DummyChromePreview(
                 color = colorScheme.onSurfaceVariant,
             )
             Text(
-                text = if (isExpanded) stringResource(R.string.onboarding_preview_hint) else "Tap handle to expand",
+                text = when {
+                    isExpanded -> stringResource(R.string.onboarding_preview_hint)
+                    hideHandle -> "Hidden while reading (Tap to expand)"
+                    else -> "Tap handle to expand"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = colorScheme.primary,
             )
@@ -617,15 +640,48 @@ private fun DummyChromePreview(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Mock Web View Container
-        Box(
+        // Mock Web View Container with real-world proportion
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(115.dp)
+                .height(125.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(if (isDark) Color(0xFF13141C) else Color(0xFFF4F6FB))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    isExpanded = !isExpanded
+                }
                 .padding(10.dp),
         ) {
+            val available = maxWidth
+            val handleSize = 44.dp
+            val expandedWidth = available
+
+            val handleOffset: Dp = when (chromePosition) {
+                ChromePosition.LEFT -> 0.dp
+                ChromePosition.CENTER -> (available - handleSize) / 2f
+                ChromePosition.RIGHT -> available - handleSize
+            }
+
+            val animatedHandleOffset by animateDpAsState(
+                targetValue = handleOffset,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 320f),
+                label = "dummy_handle_offset",
+            )
+
+            val currentWidth = lerpDp(handleSize, expandedWidth, progress)
+            val currentOffset = lerpDp(animatedHandleOffset, 0.dp, progress)
+
+            val targetOffsetY = if (hideHandle) lerpDp(handleSize + 24.dp, 0.dp, progress) else 0.dp
+            val animatedOffsetY by animateDpAsState(
+                targetValue = targetOffsetY,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 320f),
+                label = "dummy_hide_offset",
+            )
+            val hideAlpha = if (hideHandle) (progress * 2f).coerceIn(0f, 1f) else 1f
+
             // Mock web page text lines
             Column(
                 modifier = Modifier
@@ -656,181 +712,160 @@ private fun DummyChromePreview(
                 )
             }
 
-            // The floating bar / handle
-            val barAlignment = when (chromePosition) {
-                ChromePosition.LEFT -> Alignment.BottomStart
-                ChromePosition.CENTER -> Alignment.BottomCenter
-                ChromePosition.RIGHT -> Alignment.BottomEnd
+            // Single unified morphing bar surface (matches BrowserChrome architecture)
+            val basePillModifier = when (chromeTheme) {
+                ChromeTheme.CLEAR -> Modifier
+                    .shadow(
+                        elevation = if (progress > 0.5f) 8.dp else 4.dp,
+                        shape = CircleShape,
+                        spotColor = if (isDark) Color.Black.copy(alpha = 0.55f) else Color(0x30000000),
+                        ambientColor = if (isDark) Color.Black.copy(alpha = 0.35f) else Color(0x15000000),
+                    )
+                    .clip(CircleShape)
+                    .background(frostedBackground)
+                    .border(BorderStroke(1.dp, frostedBorder), CircleShape)
+                ChromeTheme.ACRYLIC -> Modifier
+                    .shadow(
+                        elevation = if (progress > 0.5f) 6.dp else 2.dp,
+                        shape = CircleShape,
+                    )
+                    .clip(CircleShape)
+                    .background(acrylicBackground)
+                    .border(BorderStroke(1.dp, acrylicBorder), CircleShape)
+                ChromeTheme.MATERIAL -> Modifier
+                    .shadow(
+                        elevation = if (progress > 0.5f) 3.dp else 1.dp,
+                        shape = CircleShape,
+                    )
+                    .clip(CircleShape)
+                    .background(colorScheme.surfaceContainer)
             }
 
-            AnimatedContent(
-                targetState = isExpanded,
-                transitionSpec = {
-                    (fadeIn(animationSpec = tween(200, delayMillis = 40)) +
-                            scaleIn(initialScale = 0.92f, animationSpec = tween(200)))
-                        .togetherWith(fadeOut(animationSpec = tween(100)))
-                },
-                modifier = Modifier.align(if (isExpanded) Alignment.BottomCenter else barAlignment),
-                label = "dummy_chrome_anim",
-            ) { expanded ->
-                if (expanded) {
-                    // Full Bar Preview
-                    val barModifier = when (chromeTheme) {
-                        ChromeTheme.CLEAR -> Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .shadow(8.dp, CircleShape, spotColor = if (isDark) Color.Black.copy(alpha = 0.55f) else Color(0x30000000))
-                            .clip(CircleShape)
-                            .background(frostedBackground)
-                            .border(BorderStroke(1.dp, frostedBorder), CircleShape)
-                        ChromeTheme.ACRYLIC -> Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .shadow(6.dp, CircleShape)
-                            .clip(CircleShape)
-                            .background(acrylicBackground)
-                            .border(BorderStroke(1.dp, acrylicBorder), CircleShape)
-                        ChromeTheme.MATERIAL -> Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .shadow(3.dp, CircleShape)
-                            .clip(CircleShape)
-                            .background(colorScheme.surfaceContainer)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .width(currentWidth)
+                    .height(handleSize)
+                    .graphicsLayer {
+                        translationX = currentOffset.toPx()
+                        translationY = animatedOffsetY.toPx()
+                        alpha = hideAlpha
                     }
-
-                    Row(
-                        modifier = barModifier
-                            .clickable { isExpanded = false }
-                            .padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = null,
-                            tint = colorScheme.onSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.size(18.dp),
-                        )
-
-                        Spacer(modifier = Modifier.width(6.dp))
-
-                        // Address pill
-                        val addressPillBg = when (chromeTheme) {
-                            ChromeTheme.CLEAR -> if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
-                            ChromeTheme.ACRYLIC -> colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
-                            ChromeTheme.MATERIAL -> colorScheme.surfaceContainerHigh
-                        }
-                        val addressPillBorder = when (chromeTheme) {
-                            ChromeTheme.CLEAR -> BorderStroke(0.75.dp, if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f))
-                            ChromeTheme.ACRYLIC -> BorderStroke(0.75.dp, colorScheme.outlineVariant.copy(alpha = 0.25f))
-                            ChromeTheme.MATERIAL -> null
-                        }
-
-                        var pillMod = Modifier
-                            .weight(1f)
-                            .height(34.dp)
-                            .clip(CircleShape)
-                            .background(addressPillBg)
-                        if (addressPillBorder != null) {
-                            pillMod = pillMod.border(addressPillBorder, CircleShape)
-                        }
-
+                    .then(basePillModifier),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = when (chromePosition) {
+                        ChromePosition.RIGHT -> Arrangement.End
+                        ChromePosition.CENTER -> Arrangement.Center
+                        ChromePosition.LEFT -> Arrangement.Start
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (progress > 0.5f) {
+                        // Expanded Bar Content
                         Row(
-                            modifier = pillMod.padding(horizontal = 10.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { alpha = ((progress - 0.5f) * 2f).coerceIn(0f, 1f) }
+                                .padding(horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.Lock,
+                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                                 contentDescription = null,
-                                tint = colorScheme.primary,
-                                modifier = Modifier.size(13.dp),
+                                tint = colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier.size(16.dp),
                             )
-                            Text(
-                                text = "clearbrowser.dev",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colorScheme.onSurface,
-                            )
-                        }
 
-                        Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
 
-                        // Tab counter preview
-                        Box(
-                            modifier = Modifier
-                                .size(26.dp)
+                            // Address pill
+                            val addressPillBg = when (chromeTheme) {
+                                ChromeTheme.CLEAR -> if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+                                ChromeTheme.ACRYLIC -> colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+                                ChromeTheme.MATERIAL -> colorScheme.surfaceContainerHigh
+                            }
+                            val addressPillBorder = when (chromeTheme) {
+                                ChromeTheme.CLEAR -> BorderStroke(0.75.dp, if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f))
+                                ChromeTheme.ACRYLIC -> BorderStroke(0.75.dp, colorScheme.outlineVariant.copy(alpha = 0.25f))
+                                ChromeTheme.MATERIAL -> null
+                            }
+
+                            var pillMod = Modifier
+                                .weight(1f)
+                                .height(30.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    when (chromeTheme) {
-                                        ChromeTheme.CLEAR -> if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.06f)
-                                        ChromeTheme.ACRYLIC -> colorScheme.surfaceContainerHighest.copy(alpha = 0.85f)
-                                        ChromeTheme.MATERIAL -> colorScheme.surfaceContainerHighest
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "3",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = colorScheme.onSurface,
-                            )
-                        }
+                                .background(addressPillBg)
+                            if (addressPillBorder != null) {
+                                pillMod = pillMod.border(addressPillBorder, CircleShape)
+                            }
 
-                        Spacer(modifier = Modifier.width(6.dp))
+                            Row(
+                                modifier = pillMod.padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Lock,
+                                    contentDescription = null,
+                                    tint = colorScheme.primary,
+                                    modifier = Modifier.size(11.dp),
+                                )
+                                Text(
+                                    text = "clearbrowser.dev",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    color = colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
 
-                        Icon(
-                            imageVector = Icons.Rounded.MoreVert,
-                            contentDescription = null,
-                            tint = colorScheme.onSurface.copy(alpha = 0.8f),
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                } else {
-                    // Minimized handle
-                    if (hideHandle) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(colorScheme.primaryContainer.copy(alpha = 0.85f))
-                                .clickable { isExpanded = true }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "Hidden while reading (Tap to expand)",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = colorScheme.onPrimaryContainer,
+                            Spacer(modifier = Modifier.width(6.dp))
+
+                            // Tab counter preview
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        when (chromeTheme) {
+                                            ChromeTheme.CLEAR -> if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.06f)
+                                            ChromeTheme.ACRYLIC -> colorScheme.surfaceContainerHighest.copy(alpha = 0.85f)
+                                            ChromeTheme.MATERIAL -> colorScheme.surfaceContainerHighest
+                                        }
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "3",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = colorScheme.onSurface,
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            Icon(
+                                imageVector = Icons.Rounded.MoreVert,
+                                contentDescription = null,
+                                tint = colorScheme.onSurface.copy(alpha = 0.8f),
+                                modifier = Modifier.size(18.dp),
                             )
                         }
                     } else {
-                        val handleModifier = when (chromeTheme) {
-                            ChromeTheme.CLEAR -> Modifier
-                                .size(44.dp)
-                                .shadow(6.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(frostedBackground)
-                                .border(BorderStroke(1.dp, frostedBorder), CircleShape)
-                            ChromeTheme.ACRYLIC -> Modifier
-                                .size(44.dp)
-                                .shadow(4.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(acrylicBackground)
-                                .border(BorderStroke(1.dp, acrylicBorder), CircleShape)
-                            ChromeTheme.MATERIAL -> Modifier
-                                .size(44.dp)
-                                .shadow(2.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(colorScheme.surfaceContainer)
-                        }
-
+                        // Minimized handle content
                         Box(
-                            modifier = handleModifier.clickable { isExpanded = true },
+                            modifier = Modifier
+                                .size(handleSize)
+                                .graphicsLayer { alpha = (1f - progress * 2f).coerceIn(0f, 1f) },
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.MoreVert,
                                 contentDescription = null,
                                 tint = colorScheme.onSurface.copy(alpha = 0.7f),
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(18.dp),
                             )
                         }
                     }
