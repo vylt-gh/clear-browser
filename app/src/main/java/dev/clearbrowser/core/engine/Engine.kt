@@ -151,6 +151,7 @@ interface EngineListener {
     fun onUrlChanged(url: String) = Unit
     fun onTitleChanged(title: String) = Unit
     fun onSecurityStateChanged(secure: Boolean) = Unit
+    fun onNavigationStateChanged(canGoBack: Boolean, canGoForward: Boolean) = Unit
     /**
      * Scroll position in the view's own pixel space.
      *

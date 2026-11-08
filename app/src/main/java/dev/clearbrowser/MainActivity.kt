@@ -399,6 +399,8 @@ class MainActivity : ComponentActivity() {
         // pages of history sit behind you -- is the single most common way
         // Android browsers annoy people.
         BackHandler(enabled = true) {
+            val canBack = viewModel.canGoBack()
+            android.util.Log.i("ClearBrowser", "BackHandler pressed: canGoBack=$canBack, state.canGoBack=${state.canGoBack}, chromeMode=${state.chromeMode}")
             when {
                 // Fullscreen video / element is highest priority to exit on back press.
                 state.isFullscreen -> viewModel.exitFullScreen()
@@ -417,9 +419,12 @@ class MainActivity : ComponentActivity() {
                 state.libraryTab != null -> viewModel.closeLibrary()
                 state.tabsVisible -> viewModel.closeTabs()
                 state.chromeMode == ChromeMode.EXPANDED -> viewModel.collapseOmnibox()
+                canBack && viewModel.goBack() -> Unit
                 state.chromeMode == ChromeMode.READING -> viewModel.toggleChrome()
-                state.canGoBack -> viewModel.goBack()
-                else -> finish()
+                else -> {
+                    android.util.Log.i("ClearBrowser", "BackHandler: finishing activity")
+                    finish()
+                }
             }
         }
 

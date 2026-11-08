@@ -42,6 +42,7 @@ class GeckoViewEngine(
 
     private var currentCanGoBack = false
     private var currentCanGoForward = false
+    private var navigationDepth = 0
     private var currentUrlString: String? = null
     private var currentTitleString: String? = null
     private var currentScrollYPos = 0
@@ -168,16 +169,31 @@ class GeckoViewEngine(
                 perms: List<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean,
             ) {
+                if (currentUrlString != null && !url.isNullOrBlank() && currentUrlString != url) {
+                    navigationDepth++
+                }
                 currentUrlString = url
                 listener.onUrlChanged(url.orEmpty())
             }
 
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
+                android.util.Log.i("ClearBrowser", "onCanGoBack: $canGoBack, navDepth=$navigationDepth")
                 currentCanGoBack = canGoBack
+                if (canGoBack) {
+                    navigationDepth = navigationDepth.coerceAtLeast(1)
+                } else {
+                    navigationDepth = 0
+                }
+                mainHandler.post {
+                    listener.onNavigationStateChanged(canGoBack, currentCanGoForward)
+                }
             }
 
             override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
                 currentCanGoForward = canGoForward
+                mainHandler.post {
+                    listener.onNavigationStateChanged(currentCanGoBack, canGoForward)
+                }
             }
 
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession>? {
@@ -197,6 +213,22 @@ class GeckoViewEngine(
                     GeckoResult.fromValue(AllowOrDeny.DENY)
                 } else {
                     GeckoResult.fromValue(AllowOrDeny.ALLOW)
+                }
+            }
+        }
+
+        session.historyDelegate = object : GeckoSession.HistoryDelegate {
+            override fun onHistoryStateChange(
+                session: GeckoSession,
+                historyList: GeckoSession.HistoryDelegate.HistoryList,
+            ) {
+                val canBack = historyList.currentIndex > 0
+                val canForward = historyList.currentIndex < historyList.size - 1
+                currentCanGoBack = canBack
+                currentCanGoForward = canForward
+                navigationDepth = historyList.currentIndex
+                mainHandler.post {
+                    listener.onNavigationStateChanged(canBack, canForward)
                 }
             }
         }
@@ -582,11 +614,14 @@ class GeckoViewEngine(
 
     override fun stop() = session.stop()
 
-    override fun canGoBack(): Boolean = currentCanGoBack
+    override fun canGoBack(): Boolean = currentCanGoBack || navigationDepth > 0
 
     override fun canGoForward(): Boolean = currentCanGoForward
 
-    override fun goBack() = session.goBack()
+    override fun goBack() {
+        navigationDepth = (navigationDepth - 1).coerceAtLeast(0)
+        session.goBack()
+    }
 
     override fun goForward() = session.goForward()
 

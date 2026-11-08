@@ -215,10 +215,12 @@ class WebViewEngine(
             override fun onPageFinished(view: WebView, url: String) {
                 listener.onTitleChanged(view.title.orEmpty())
                 listener.onLoadStateChanged(LoadState.COMPLETE)
+                listener.onNavigationStateChanged(view.canGoBack(), view.canGoForward())
             }
 
             override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
                 listener.onUrlChanged(url)
+                listener.onNavigationStateChanged(view.canGoBack(), view.canGoForward())
             }
 
             override fun shouldOverrideUrlLoading(
@@ -602,9 +604,15 @@ class WebViewEngine(
 
     override fun canGoForward() = webView.canGoForward()
 
-    override fun goBack() = webView.goBack()
+    override fun goBack() {
+        webView.goBack()
+        listener.onNavigationStateChanged(webView.canGoBack(), webView.canGoForward())
+    }
 
-    override fun goForward() = webView.goForward()
+    override fun goForward() {
+        webView.goForward()
+        listener.onNavigationStateChanged(webView.canGoBack(), webView.canGoForward())
+    }
 
     override fun currentUrl(): String? = webView.url
 

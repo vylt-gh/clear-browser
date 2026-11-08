@@ -750,12 +750,44 @@ class ReadingViewModel(
         if (_state.value.isLoading) engine.stop() else engine.reload()
     }
 
-    fun goBack() {
-        engineForActive()?.goBack()
+    fun canGoBack(): Boolean {
+        val engine = engineForActive()
+        return (engine != null && engine.canGoBack()) || _state.value.canGoBack
     }
 
-    fun goForward() {
-        engineForActive()?.goForward()
+    fun canGoForward(): Boolean {
+        val engine = engineForActive()
+        return (engine != null && engine.canGoForward()) || _state.value.canGoForward
+    }
+
+    fun goBack(): Boolean {
+        val engine = engineForActive()
+        val canBack = (engine?.canGoBack() == true) || _state.value.canGoBack
+        android.util.Log.i("ClearBrowser", "ReadingViewModel.goBack: engine=$engine, canBack=$canBack")
+        if (engine != null && canBack) {
+            revealChrome()
+            engine.goBack()
+            _state.value = _state.value.copy(
+                canGoBack = engine.canGoBack(),
+                canGoForward = engine.canGoForward(),
+            )
+            return true
+        }
+        return false
+    }
+
+    fun goForward(): Boolean {
+        val engine = engineForActive()
+        if (engine != null && (engine.canGoForward() || _state.value.canGoForward)) {
+            revealChrome()
+            engine.goForward()
+            _state.value = _state.value.copy(
+                canGoBack = engine.canGoBack(),
+                canGoForward = engine.canGoForward(),
+            )
+            return true
+        }
+        return false
     }
 
     fun setImmersive(enabled: Boolean) = settingsStore.setImmersiveMode(enabled)
@@ -1298,6 +1330,14 @@ class ReadingViewModel(
                 menuPopupVisible = false,
             )
         }
+
+        override fun onNavigationStateChanged(canGoBack: Boolean, canGoForward: Boolean) {
+            if (!isActive) return
+            _state.value = _state.value.copy(
+                canGoBack = canGoBack,
+                canGoForward = canGoForward,
+            )
+        }
     }
 
     private fun onActiveScroll(
@@ -1362,11 +1402,20 @@ class ReadingViewModel(
             urlFlushScheduled = false
             val latest = pendingUrl ?: return@launch
             pendingUrl = null
-            if (latest == _state.value.url) return@launch
+            val activeEngine = engineForActive()
+            val engineCanBack = activeEngine?.canGoBack() == true
+            val engineCanForward = activeEngine?.canGoForward() == true
+            if (latest == _state.value.url) {
+                _state.value = _state.value.copy(
+                    canGoBack = engineCanBack || _state.value.canGoBack,
+                    canGoForward = engineCanForward || _state.value.canGoForward,
+                )
+                return@launch
+            }
             _state.value = _state.value.copy(
                 url = latest,
-                canGoBack = engineForActive()?.canGoBack() ?: false,
-                canGoForward = engineForActive()?.canGoForward() ?: false,
+                canGoBack = engineCanBack || _state.value.canGoBack,
+                canGoForward = engineCanForward || _state.value.canGoForward,
             )
         }
     }
