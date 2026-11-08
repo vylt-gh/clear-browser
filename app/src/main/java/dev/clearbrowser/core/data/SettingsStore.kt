@@ -90,6 +90,9 @@ data class BrowserSettings(
 
     /** Visual styling theme for the browser chrome (Clear, Acrylic, Material). */
     val chromeTheme: ChromeTheme = ChromeTheme.CLEAR,
+
+    /** Whether to completely hide the collapsed handle when reading. */
+    val hideHandle: Boolean = false,
 ) {
 }
 
@@ -126,6 +129,8 @@ class SettingsStore(context: Context) {
 
     fun setChromeTheme(theme: ChromeTheme) = update { it.copy(chromeTheme = theme) }
 
+    fun setHideHandle(enabled: Boolean) = update { it.copy(hideHandle = enabled) }
+
     fun setOriginalMaterial3Chrome(enabled: Boolean) =
         setChromeTheme(if (enabled) ChromeTheme.MATERIAL else ChromeTheme.CLEAR)
 
@@ -142,6 +147,7 @@ class SettingsStore(context: Context) {
             .putString(KEY_WEB_THEME, next.webTheme.name)
             .putInt(KEY_TEXT_ZOOM, next.textZoom)
             .putString(KEY_CHROME_THEME, next.chromeTheme.name)
+            .putBoolean(KEY_HIDE_HANDLE, next.hideHandle)
             .apply()
     }
 
@@ -165,6 +171,7 @@ class SettingsStore(context: Context) {
         chromeTheme = prefs.getString(KEY_CHROME_THEME, null)
             ?.let { runCatching { ChromeTheme.valueOf(it) }.getOrNull() }
             ?: if (prefs.getBoolean(KEY_ORIGINAL_M3_CHROME, false)) ChromeTheme.ACRYLIC else ChromeTheme.CLEAR,
+        hideHandle = prefs.getBoolean(KEY_HIDE_HANDLE, false),
     )
 
     private companion object {
@@ -177,6 +184,7 @@ class SettingsStore(context: Context) {
         const val KEY_WEB_THEME = "web_theme"
         const val KEY_TEXT_ZOOM = "text_zoom"
         const val KEY_CHROME_THEME = "chrome_theme"
+        const val KEY_HIDE_HANDLE = "hide_handle"
         const val KEY_ORIGINAL_M3_CHROME = "original_material3_chrome"
     }
 }

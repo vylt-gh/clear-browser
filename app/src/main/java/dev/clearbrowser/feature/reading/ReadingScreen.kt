@@ -98,6 +98,7 @@ fun ReadingScreen(
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (dev.clearbrowser.core.data.ChromeTheme) -> Unit = {},
+    onHideHandleChange: (Boolean) -> Unit = {},
     onSharePage: () -> Unit = {},
     onCopyLink: () -> Unit = {},
     onShareUrl: (String, String) -> Unit = { _, _ -> },
@@ -271,6 +272,7 @@ fun ReadingScreen(
                     onWebThemeChange = onWebThemeChange,
                     onTextZoomChange = onTextZoomChange,
                     onChromeThemeChange = onChromeThemeChange,
+                    onHideHandleChange = onHideHandleChange,
                     onClearBrowsingData = onClearBrowsingData,
                 )
             }

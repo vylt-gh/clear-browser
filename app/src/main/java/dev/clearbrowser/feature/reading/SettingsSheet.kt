@@ -80,6 +80,7 @@ fun SettingsSheet(
     onWebThemeChange: (WebTheme) -> Unit,
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (ChromeTheme) -> Unit = {},
+    onHideHandleChange: (Boolean) -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -165,6 +166,12 @@ fun SettingsSheet(
                 subtitle = stringResource(R.string.menu_auto_hide_subtitle),
                 checked = settings.autoHideChrome,
                 onCheckedChange = onAutoHideChange,
+            )
+            SwitchRow(
+                title = stringResource(R.string.menu_hide_handle),
+                subtitle = stringResource(R.string.menu_hide_handle_subtitle),
+                checked = settings.hideHandle,
+                onCheckedChange = onHideHandleChange,
             )
             SwitchRow(
                 title = stringResource(R.string.menu_incognito),

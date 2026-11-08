@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-100%20passing-success" alt="Tests: 100 passing" />
+  <img src="https://img.shields.io/badge/Tests-102%20passing-success" alt="Tests: 102 passing" />
 </p>
 
 ---
@@ -189,7 +189,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 100 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 102 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records
@@ -206,8 +206,10 @@ clear-browser/
   - **Clear** (Default): Signature frosted glass aesthetic with multi-stop acrylic gradient, specular rim highlight borders, ambient drop shadow, and speech-bubble anchored popup menu.
   - **Acrylic**: Translucent `surfaceContainer` (88%–78% alpha) with `outline` specular gradient border, 8.dp elevation, and standard rounded card popup menu.
   - **Material** (from v0.1): Classic pure solid Material 3 `surfaceContainer` and `surfaceContainerHigh` with no artificial borders or translucent gradients, matching the original v0.1 look.
+- **Fixed Handle Alignment & Positioning**: Fixed coordinate calculation bug where centered parent column previously displaced Left, Center, and Right dock positions.
+- **Dedicated "Hide Handle When Reading" Toggle**: Added dedicated setting switch to completely hide the collapsed handle while reading without requiring off-screen dock hacks. Scroll up or back-press to reveal the bar.
 - **Segmented Chrome Theme Control**: Interactive `SingleChoiceSegmentedButtonRow` embedded seamlessly in the Settings bottom sheet.
-- **Intent Automation Dispatch**: Full Intent support for automating the Chrome theme via `--es command chrome_theme --es theme CLEAR|ACRYLIC|MATERIAL`.
+- **Intent Automation Dispatch**: Full Intent support for automating the Chrome theme via `--es command chrome_theme --es theme CLEAR|ACRYLIC|MATERIAL`, handle positioning (`--es command position --es position LEFT|CENTER|RIGHT`), and handle hiding (`--es command hide_handle --ez enabled true|false`).
 
 ### v0.6.0
 - **Share Page & Copy Link**: Added quick sharing via Android standard `ACTION_SEND` chooser and one-tap link copying directly in the anchored popup menu.

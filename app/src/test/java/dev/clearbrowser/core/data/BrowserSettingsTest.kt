@@ -51,4 +51,16 @@ class BrowserSettingsTest {
         assertEquals(3, themes.size)
         assertEquals(setOf(ChromeTheme.CLEAR, ChromeTheme.ACRYLIC, ChromeTheme.MATERIAL), themes)
     }
+
+    @Test
+    fun defaultHideHandleIsFalse() {
+        val settings = BrowserSettings()
+        assertEquals(false, settings.hideHandle)
+    }
+
+    @Test
+    fun customHideHandleIsRetained() {
+        val settings = BrowserSettings(hideHandle = true)
+        assertEquals(true, settings.hideHandle)
+    }
 }

@@ -156,6 +156,9 @@ class MainActivity : ComponentActivity() {
             command == "menu" || action == "dev.clearbrowser.ACTION_MENU" -> {
                 viewModel.toggleMenuPopup()
             }
+            command == "toggle_chrome" || command == "collapse" || action == "dev.clearbrowser.ACTION_TOGGLE_CHROME" -> {
+                viewModel.toggleChrome()
+            }
             command == "settings" || action == "dev.clearbrowser.ACTION_SETTINGS" -> {
                 viewModel.openSettings()
             }
@@ -220,6 +223,19 @@ class MainActivity : ComponentActivity() {
                     else -> dev.clearbrowser.core.data.ChromeTheme.CLEAR
                 }
                 settings.setChromeTheme(theme)
+            }
+            command == "position" || action == "dev.clearbrowser.ACTION_SET_POSITION" -> {
+                val posStr = intent.getStringExtra("position")?.uppercase()
+                val pos = when (posStr) {
+                    "LEFT" -> dev.clearbrowser.core.data.ChromePosition.LEFT
+                    "RIGHT" -> dev.clearbrowser.core.data.ChromePosition.RIGHT
+                    else -> dev.clearbrowser.core.data.ChromePosition.CENTER
+                }
+                settings.setChromePosition(pos)
+            }
+            command == "hide_handle" || action == "dev.clearbrowser.ACTION_HIDE_HANDLE" -> {
+                val enabled = intent.getBooleanExtra("enabled", true)
+                settings.setHideHandle(enabled)
             }
             command == "m3_chrome" || command == "original_m3" || action == "dev.clearbrowser.ACTION_M3_CHROME" -> {
                 val enabled = intent.getBooleanExtra("enabled", true)
@@ -423,6 +439,7 @@ class MainActivity : ComponentActivity() {
             onChromePositionChange = settings::setChromePosition,
             onSearchEngineChange = settings::setSearchEngine,
             onAutoHideChange = settings::setAutoHideChrome,
+            onHideHandleChange = settings::setHideHandle,
             onDynamicColorChange = settings::setDynamicColor,
             onImmersiveChange = { viewModel.setImmersive(it) },
             onIncognitoChange = viewModel::setIncognito,

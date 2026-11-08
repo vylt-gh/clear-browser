@@ -198,6 +198,8 @@ fun ChromeSurface(
 
         val isDark = isSystemInDarkTheme()
         val chromeTheme = state.settings.chromeTheme
+        val hideHandle = state.settings.hideHandle
+        val hideOffsetY = if (hideHandle) lerpDp(HANDLE_SIZE + HANDLE_MARGIN * 3, 0.dp, progress) else 0.dp
         val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
 
         val colorScheme = MaterialTheme.colorScheme
@@ -220,12 +222,13 @@ fun ChromeSurface(
 
         Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.Start,
         ) {
             AnimatedVisibility(
                 visible = expanded && state.searchSuggestions.isNotEmpty(),
                 enter = fadeIn(chromeFadeSpec()) + expandVertically(expandFrom = Alignment.Bottom),
                 exit = fadeOut(chromeFadeSpec()) + shrinkVertically(shrinkTowards = Alignment.Bottom),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 SuggestionsCard(
                     suggestions = state.searchSuggestions,
@@ -249,7 +252,13 @@ fun ChromeSurface(
                     Modifier
                         .width(currentWidth)
                         .height(HANDLE_SIZE)
-                        .graphicsLayer { translationX = currentOffset.toPx() }
+                        .graphicsLayer {
+                            translationX = currentOffset.toPx()
+                            translationY = hideOffsetY.toPx()
+                            if (hideHandle) {
+                                alpha = (progress * 2f).coerceIn(0f, 1f)
+                            }
+                        }
                         .shadow(
                             elevation = if (progress > 0.5f) 14.dp else 4.dp,
                             shape = CircleShape,
@@ -264,7 +273,13 @@ fun ChromeSurface(
                     Modifier
                         .width(currentWidth)
                         .height(HANDLE_SIZE)
-                        .graphicsLayer { translationX = currentOffset.toPx() }
+                        .graphicsLayer {
+                            translationX = currentOffset.toPx()
+                            translationY = hideOffsetY.toPx()
+                            if (hideHandle) {
+                                alpha = (progress * 2f).coerceIn(0f, 1f)
+                            }
+                        }
                         .shadow(
                             elevation = if (progress > 0.5f) 8.dp else 2.dp,
                             shape = CircleShape,
@@ -277,7 +292,13 @@ fun ChromeSurface(
                     Modifier
                         .width(currentWidth)
                         .height(HANDLE_SIZE)
-                        .graphicsLayer { translationX = currentOffset.toPx() }
+                        .graphicsLayer {
+                            translationX = currentOffset.toPx()
+                            translationY = hideOffsetY.toPx()
+                            if (hideHandle) {
+                                alpha = (progress * 2f).coerceIn(0f, 1f)
+                            }
+                        }
                         .shadow(
                             elevation = if (progress > 0.5f) 3.dp else 1.dp,
                             shape = CircleShape,
