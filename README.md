@@ -45,9 +45,9 @@ The web page is the content; the chrome is just the tool. When you scroll to rea
 1. **Content First, Chrome Second**  
    Modern mobile browsers occupy valuable screen real estate with persistent multi-row toolbars, shopping widgets, and recommendation tiles. Clear treats the document as the primary experience: the omnibox and navigation controls auto-hide during reading and animate into a subtle floating handle.
 2. **Resource-Respecting Architecture**  
-   Traditional browsers often keep dozens of `WebView` compositor instances running concurrently in the background, consuming hundreds of megabytes of RAM and draining battery. Clear maintains **only one active attached `WebView`** in the view hierarchy at a time. Inactive tabs are detached, paused, and restored on-demand.
+   Traditional browsers often keep dozens of browser engine compositor instances running concurrently in the background, consuming hundreds of megabytes of RAM and draining battery. Clear maintains **only one active attached GeckoView instance** in the view hierarchy at a time. Inactive tabs are detached, paused, and restored on-demand.
 3. **Hard Isolation for Privacy**  
-   Private browsing should be a security guarantee, not a cleanup promise. Clear's Incognito mode uses Android's multi-profile engine API (`WebViewCompat.setProfile` / `MULTI_PROFILE`) to isolate cookies, cache, and storage in a dedicated memory profile. Private sessions never write to disk.
+   Private browsing should be a security guarantee, not a cleanup promise. Clear's Incognito mode uses dedicated ephemeral `GeckoSession` instances (`usePrivateMode(true)`) with isolated in-memory cookie jars, cache, and storage. Private sessions never write to disk and are completely purged when finished.
 4. **Local-First & Transparent**  
    No external sync accounts, no telemetry, no tracking. History and bookmarks are stored directly on-device in atomic human-readable JSON files with atomic rename operations.
 
@@ -166,9 +166,9 @@ flowchart TD
 ```
 
 ### Performance Highlights
-- **Decoupled Progress State**: WebView loading progress emits into an independent `StateFlow<Int>`, preventing full-screen UI recompositions during high-frequency (100Hz) page loads.
+- **Decoupled Progress State**: GeckoView engine loading progress emits into an independent `StateFlow<Int>`, preventing full-screen UI recompositions during high-frequency (100Hz) page loads.
 - **Choreographer-Synchronized Scroll**: Scroll detection synchronizes directly with Android's `Choreographer` display frame pulses, dropping janky frames from 23% to 1.75% and p95 frame rendering latency to 11ms.
-- **Tested Pure Domain Logic**: Critical logic (`TabStrip`, `ChromeReservations`, `HistoryLog`, `BookmarkList`, `Address`) is written in pure Kotlin with no Android SDK dependencies, allowing millisecond unit testing.
+- **Tested Pure Domain Logic**: Critical logic (`TabStrip`, `ChromeReservations`, `HistoryLog`, `BookmarkList`, `Address`, `BookmarkCodec`) is written in pure Kotlin with no Android SDK dependencies, allowing millisecond unit testing.
 
 ---
 
@@ -187,7 +187,7 @@ clear-browser/
 │   │   │   │   ├── JsDialogHost.kt            # Compose JS dialog host
 │   │   │   │   ├── core/
 │   │   │   │   │   ├── data/                  # Storage, settings, address parsing
-│   │   │   │   │   ├── engine/                # WebView engine, profiles, reservations
+│   │   │   │   │   ├── engine/                # GeckoView engine, profiles, reservations
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
