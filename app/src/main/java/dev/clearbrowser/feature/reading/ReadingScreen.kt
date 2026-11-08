@@ -97,6 +97,7 @@ fun ReadingScreen(
     onCloseSettings: () -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onTextZoomChange: (Int) -> Unit = {},
+    onOriginalMaterial3ChromeChange: (Boolean) -> Unit = {},
     onSharePage: () -> Unit = {},
     onCopyLink: () -> Unit = {},
     onShareUrl: (String, String) -> Unit = { _, _ -> },
@@ -269,6 +270,7 @@ fun ReadingScreen(
                     onIncognitoChange = onIncognitoChange,
                     onWebThemeChange = onWebThemeChange,
                     onTextZoomChange = onTextZoomChange,
+                    onOriginalMaterial3ChromeChange = onOriginalMaterial3ChromeChange,
                     onClearBrowsingData = onClearBrowsingData,
                 )
             }

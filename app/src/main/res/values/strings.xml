@@ -62,6 +62,8 @@
     </plurals>
     <string name="menu_dynamic_color">Use wallpaper colours</string>
     <string name="menu_dynamic_color_subtitle">Material palette from your wallpaper</string>
+    <string name="menu_original_m3">Original Material 3 chrome</string>
+    <string name="menu_original_m3_subtitle">Revert from frosted glass to original Material 3 surface styling</string>
 
     <string name="menu_find_in_page">Find in page</string>
     <string name="menu_find_in_page_subtitle">Search text on current page</string>

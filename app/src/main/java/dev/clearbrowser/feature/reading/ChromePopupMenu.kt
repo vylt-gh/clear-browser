@@ -141,21 +141,30 @@ fun ChromePopupMenu(
     onShare: () -> Unit = {},
     onCopyLink: () -> Unit = {},
     onSettings: () -> Unit,
+    isOriginalM3: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     if (!visible) return
 
-    val shape = BubbleShape(
-        cornerRadius = 16.dp,
-        arrowWidth = 16.dp,
-        arrowHeight = 10.dp,
-        arrowOffsetFromRight = 16.dp,
-    )
+    val shape = if (isOriginalM3) {
+        RoundedCornerShape(16.dp)
+    } else {
+        BubbleShape(
+            cornerRadius = 16.dp,
+            arrowWidth = 16.dp,
+            arrowHeight = 10.dp,
+            arrowOffsetFromRight = 16.dp,
+        )
+    }
 
     Surface(
         modifier = modifier
             .width(215.dp)
-            .shadow(16.dp, shape = shape, spotColor = Color.Black.copy(alpha = 0.45f))
+            .shadow(
+                elevation = if (isOriginalM3) 8.dp else 16.dp,
+                shape = shape,
+                spotColor = Color.Black.copy(alpha = if (isOriginalM3) 0.25f else 0.45f),
+            )
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), shape = shape),
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -163,7 +172,12 @@ fun ChromePopupMenu(
     ) {
         Column(
             modifier = Modifier
-                .padding(top = 8.dp, bottom = 18.dp, start = 6.dp, end = 6.dp),
+                .padding(
+                    top = 8.dp,
+                    bottom = if (isOriginalM3) 8.dp else 18.dp,
+                    start = 6.dp,
+                    end = 6.dp,
+                ),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             PopupMenuItem(

@@ -78,6 +78,7 @@ fun SettingsSheet(
     onIncognitoChange: (Boolean) -> Unit,
     onWebThemeChange: (WebTheme) -> Unit,
     onTextZoomChange: (Int) -> Unit = {},
+    onOriginalMaterial3ChromeChange: (Boolean) -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -180,6 +181,12 @@ fun SettingsSheet(
                 subtitle = stringResource(R.string.menu_dynamic_color_subtitle),
                 checked = settings.dynamicColor,
                 onCheckedChange = onDynamicColorChange,
+            )
+            SwitchRow(
+                title = stringResource(R.string.menu_original_m3),
+                subtitle = stringResource(R.string.menu_original_m3_subtitle),
+                checked = settings.originalMaterial3Chrome,
+                onCheckedChange = onOriginalMaterial3ChromeChange,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))

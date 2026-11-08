@@ -196,7 +196,26 @@ fun ChromeSurface(
         val currentOffset = lerpDp(handleOffset, 0.dp, progress)
 
         val isDark = isSystemInDarkTheme()
+        val isOriginalM3 = state.settings.originalMaterial3Chrome
         val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
+
+        val colorScheme = MaterialTheme.colorScheme
+        val m3Background = remember(colorScheme) {
+            Brush.verticalGradient(
+                listOf(
+                    colorScheme.surfaceContainer.copy(alpha = 0.88f),
+                    colorScheme.surfaceContainer.copy(alpha = 0.78f),
+                )
+            )
+        }
+        val m3Border = remember(colorScheme) {
+            Brush.verticalGradient(
+                listOf(
+                    colorScheme.outline.copy(alpha = 0.35f),
+                    colorScheme.outlineVariant.copy(alpha = 0.18f),
+                )
+            )
+        }
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -217,14 +236,27 @@ fun ChromeSurface(
                         omniboxText = TextFieldValue(text, TextRange(text.length))
                         onQueryChange(text)
                     },
+                    isOriginalM3 = isOriginalM3,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
                 )
             }
 
-            Row(
-                modifier = Modifier
+            val chromeBarModifier = if (isOriginalM3) {
+                Modifier
+                    .width(currentWidth)
+                    .height(HANDLE_SIZE)
+                    .graphicsLayer { translationX = currentOffset.toPx() }
+                    .shadow(
+                        elevation = if (progress > 0.5f) 8.dp else 2.dp,
+                        shape = CircleShape,
+                    )
+                    .clip(CircleShape)
+                    .background(m3Background)
+                    .border(BorderStroke(1.dp, m3Border), CircleShape)
+            } else {
+                Modifier
                     .width(currentWidth)
                     .height(HANDLE_SIZE)
                     .graphicsLayer { translationX = currentOffset.toPx() }
@@ -237,6 +269,10 @@ fun ChromeSurface(
                     .clip(CircleShape)
                     .background(frostedBackground)
                     .border(BorderStroke(1.dp, frostedBorder), CircleShape)
+            }
+
+            Row(
+                modifier = chromeBarModifier
                     .onGloballyPositioned { coords ->
                         val window = coords.boundsInWindow()
                         bounds.set(window.left, window.top, window.right, window.bottom)
@@ -360,20 +396,29 @@ private fun CompactBar(
             }
 
             val isDark = isSystemInDarkTheme()
+            val isOriginalM3 = state.settings.originalMaterial3Chrome
+            val addressPillBackground = if (isOriginalM3) {
+                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+            } else {
+                if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+            }
+            val addressPillBorder = if (isOriginalM3) {
+                BorderStroke(
+                    0.75.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                )
+            } else {
+                BorderStroke(
+                    0.75.dp,
+                    if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f),
+                )
+            }
             Row(
                 modifier = Modifier
                     .weight(1f)
                     .clip(CircleShape)
-                    .background(
-                        if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
-                    )
-                    .border(
-                        BorderStroke(
-                            0.75.dp,
-                            if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f),
-                        ),
-                        CircleShape,
-                    )
+                    .background(addressPillBackground)
+                    .border(addressPillBorder, CircleShape)
                     .height(44.dp)
                     // Tapping the address is the primary way into the
                     // browser's own UI, so it has to be the most
@@ -458,6 +503,7 @@ private fun CompactBar(
                             onShare = onSharePage,
                             onCopyLink = onCopyLink,
                             onSettings = onSettings,
+                            isOriginalM3 = isOriginalM3,
                         )
                     }
                 }
@@ -608,14 +654,30 @@ private fun SuggestionsCard(
     suggestions: List<SearchSuggestion>,
     onSelect: (SearchSuggestion) -> Unit,
     onInsert: (String) -> Unit,
+    isOriginalM3: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
     val shape = RoundedCornerShape(24.dp)
     val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
+    val colorScheme = MaterialTheme.colorScheme
 
-    Box(
-        modifier = modifier
+    val cardModifier = if (isOriginalM3) {
+        val m3Border = remember(colorScheme) {
+            Brush.verticalGradient(
+                listOf(
+                    colorScheme.outline.copy(alpha = 0.35f),
+                    colorScheme.outlineVariant.copy(alpha = 0.15f),
+                )
+            )
+        }
+        modifier
+            .shadow(elevation = 8.dp, shape = shape)
+            .clip(shape)
+            .background(colorScheme.surfaceContainerHigh.copy(alpha = 0.90f))
+            .border(BorderStroke(1.dp, m3Border), shape)
+    } else {
+        modifier
             .shadow(
                 elevation = 16.dp,
                 shape = shape,
@@ -624,8 +686,10 @@ private fun SuggestionsCard(
             )
             .clip(shape)
             .background(frostedBackground)
-            .border(BorderStroke(1.dp, frostedBorder), shape),
-    ) {
+            .border(BorderStroke(1.dp, frostedBorder), shape)
+    }
+
+    Box(modifier = cardModifier) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -634,7 +698,11 @@ private fun SuggestionsCard(
             itemsIndexed(suggestions) { index, suggestion ->
                 if (index > 0) {
                     HorizontalDivider(
-                        color = if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f),
+                        color = if (isOriginalM3) {
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
+                        } else {
+                            if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f)
+                        },
                         thickness = 0.5.dp,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )

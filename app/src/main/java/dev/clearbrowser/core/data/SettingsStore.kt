@@ -87,6 +87,9 @@ data class BrowserSettings(
 
     /** Text scaling zoom percentage (e.g. 80, 100, 125, 150). */
     val textZoom: Int = 100,
+
+    /** Revert the chrome (bottom navigation bar) from frosted glass to original Material 3 look. */
+    val originalMaterial3Chrome: Boolean = false,
 ) {
 }
 
@@ -121,6 +124,9 @@ class SettingsStore(context: Context) {
 
     fun setTextZoom(zoom: Int) = update { it.copy(textZoom = zoom) }
 
+    fun setOriginalMaterial3Chrome(enabled: Boolean) =
+        update { it.copy(originalMaterial3Chrome = enabled) }
+
     private inline fun update(transform: (BrowserSettings) -> BrowserSettings) {
         val next = transform(_state.value)
         _state.value = next
@@ -133,6 +139,7 @@ class SettingsStore(context: Context) {
             .putString(KEY_SEARCH_ENGINE, next.searchEngine.name)
             .putString(KEY_WEB_THEME, next.webTheme.name)
             .putInt(KEY_TEXT_ZOOM, next.textZoom)
+            .putBoolean(KEY_ORIGINAL_M3_CHROME, next.originalMaterial3Chrome)
             .apply()
     }
 
@@ -153,6 +160,7 @@ class SettingsStore(context: Context) {
             ?.let { runCatching { WebTheme.valueOf(it) }.getOrNull() }
             ?: WebTheme.SYSTEM,
         textZoom = prefs.getInt(KEY_TEXT_ZOOM, 100),
+        originalMaterial3Chrome = prefs.getBoolean(KEY_ORIGINAL_M3_CHROME, false),
     )
 
     private companion object {
@@ -164,5 +172,6 @@ class SettingsStore(context: Context) {
         const val KEY_SEARCH_ENGINE = "search_engine"
         const val KEY_WEB_THEME = "web_theme"
         const val KEY_TEXT_ZOOM = "text_zoom"
+        const val KEY_ORIGINAL_M3_CHROME = "original_material3_chrome"
     }
 }

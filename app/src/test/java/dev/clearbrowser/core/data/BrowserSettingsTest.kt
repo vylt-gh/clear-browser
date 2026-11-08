@@ -29,4 +29,16 @@ class BrowserSettingsTest {
         val settings = BrowserSettings(textZoom = 150)
         assertEquals(150, settings.textZoom)
     }
+
+    @Test
+    fun defaultOriginalMaterial3ChromeIsFalse() {
+        val settings = BrowserSettings()
+        assertEquals(false, settings.originalMaterial3Chrome)
+    }
+
+    @Test
+    fun customOriginalMaterial3ChromeIsRetained() {
+        val settings = BrowserSettings(originalMaterial3Chrome = true)
+        assertEquals(true, settings.originalMaterial3Chrome)
+    }
 }
