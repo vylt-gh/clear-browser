@@ -6,13 +6,13 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat&logo=android&logoColor=white" alt="Platform: Android" />
-  <img src="https://img.shields.io/badge/Release-v0.7.0-blue?style=flat&logo=github" alt="Release: v0.7.0" />
+  <img src="https://img.shields.io/badge/Release-v0.8.0-blue?style=flat&logo=github" alt="Release: v0.8.0" />
   <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=kotlin&logoColor=white" alt="Kotlin 2.3.20" />
   <img src="https://img.shields.io/badge/Engine-Mozilla%20GeckoView-FF7139?style=flat&logo=firefox&logoColor=white" alt="Engine: Mozilla GeckoView" />
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-102%20passing-success" alt="Tests: 102 passing" />
+  <img src="https://img.shields.io/badge/Tests-106%20passing-success" alt="Tests: 106 passing" />
 </p>
 
 ---
@@ -189,7 +189,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 102 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 106 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records
@@ -201,7 +201,20 @@ clear-browser/
 
 ## Releases & Changelog
 
-### v0.7.0 (Latest)
+### v0.8.0 (Latest)
+- **Dynamic Extension Action Popups**: WebExtension popups (such as uBlock Origin's quick controls/dashboard and Dark Reader) now open in a responsive modal bottom sheet attached directly to the active web tab. Features like uBlock's element zapper, picker, and per-site switches interact seamlessly with the live page.
+- **Dual Extension Controls**: Each installed extension card in the Extensions sheet now displays separate quick-action and settings buttons:
+  - **Popup / Action**: Triggers the extension's interactive popup for the active tab.
+  - **Settings**: Opens the extension's full options/dashboard page (`options_ui`).
+- **AMO Firefox Add-ons Store Integration**: Direct link in the Extensions sheet to browse `addons.mozilla.org` with native handling for installing extensions directly into Clear Browser.
+- **Downloads Tab in Library**: Added dedicated Downloads manager in the Library sheet alongside Bookmarks and History with real-time download status, file sizes, and quick open/share actions.
+- **Hierarchical Back Navigation**:
+  - The Android back gesture walks back through engine browsing history without prematurely exiting the app.
+  - Reaching the first page of a tab navigates cleanly to the start page (`about:blank`) instead of closing the browser.
+  - Exiting the app only occurs after backing out from `about:blank`.
+  - The toolbar back button dynamically indicates navigation availability.
+
+### v0.7.0
 - **Chrome Visual Theming**: Added a 3-way visual chrome style selector in Settings (`Clear`, `Acrylic`, `Material`):
   - **Clear** (Default): Signature frosted glass aesthetic with multi-stop acrylic gradient, specular rim highlight borders, ambient drop shadow, and speech-bubble anchored popup menu.
   - **Acrylic**: Translucent `surfaceContainer` (88%–78% alpha) with `outline` specular gradient border, 8.dp elevation, and standard rounded card popup menu.
