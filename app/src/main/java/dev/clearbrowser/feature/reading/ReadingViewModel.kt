@@ -998,6 +998,15 @@ class ReadingViewModel(
         }
     }
 
+    fun openExtensionStore() {
+        _state.value = _state.value.copy(
+            extensionsVisible = false,
+            menuPopupVisible = false,
+            settingsVisible = false,
+        )
+        navigate(FIREFOX_EXTENSION_STORE_URL)
+    }
+
     fun setOverlay(overlaid: Boolean) {
         if (overlaid) openMenuPopup() else closeMenuPopup()
     }
@@ -1522,6 +1531,7 @@ class ReadingViewModel(
     }
 
     private companion object {
+        const val FIREFOX_EXTENSION_STORE_URL = "https://addons.mozilla.org/android/"
         /**
          * The homepage this browser used to open, kept only so a session file
          * that still names it can be recognised and discarded. See

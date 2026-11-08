@@ -168,6 +168,9 @@ class MainActivity : ComponentActivity() {
             command == "ubo" || command == "ublock" || command == "dashboard" || action == "dev.clearbrowser.ACTION_UBO" -> {
                 viewModel.openUBlockDashboard()
             }
+            command == "extension_store" || command == "amo" || action == "dev.clearbrowser.ACTION_EXTENSION_STORE" -> {
+                viewModel.openExtensionStore()
+            }
             command == "bookmarks" || action == "dev.clearbrowser.ACTION_BOOKMARKS" -> {
                 viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.BOOKMARKS)
             }
@@ -409,6 +412,7 @@ class MainActivity : ComponentActivity() {
                 )
             },
             onOpenUBlockDashboard = viewModel::openUBlockDashboard,
+            onOpenExtensionStore = viewModel::openExtensionStore,
             onOpenTabs = viewModel::openTabs,
             onSelectTab = { id ->
                 // Selecting is also dismissing: the user picked a page to look

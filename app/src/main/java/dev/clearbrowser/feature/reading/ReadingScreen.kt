@@ -106,6 +106,7 @@ fun ReadingScreen(
     onCloseContextMenu: () -> Unit = {},
     onDownload: (String) -> Unit = {},
     onOpenUBlockDashboard: () -> Unit = {},
+    onOpenExtensionStore: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
@@ -281,6 +282,7 @@ fun ReadingScreen(
                 ExtensionsSheet(
                     onDismiss = onCloseExtensions,
                     onOpenDashboard = onOpenUBlockDashboard,
+                    onOpenExtensionStore = onOpenExtensionStore,
                 )
             }
 
