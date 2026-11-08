@@ -30,6 +30,8 @@ class AddressTest {
         assertEquals("mailto:test@example.com", resolveAddress("mailto:test@example.com", kagi))
         assertEquals("tel:+1234567890", resolveAddress("tel:+1234567890", kagi))
         assertEquals("market://details?id=app", resolveAddress("market://details?id=app", kagi))
+        assertEquals("moz-extension://uuid-123/dashboard.html", resolveAddress("moz-extension://uuid-123/dashboard.html", kagi))
+        assertEquals("resource://android/assets/test.html", resolveAddress("resource://android/assets/test.html", kagi))
     }
 
     @Test

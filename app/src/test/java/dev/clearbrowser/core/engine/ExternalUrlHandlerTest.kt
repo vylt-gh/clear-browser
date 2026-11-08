@@ -16,6 +16,7 @@ class ExternalUrlHandlerTest {
             "file:///sdcard/test.html",
             "javascript:void(0)",
             "resource://android/assets/page.html",
+            "moz-extension://0d2e9295-ca0d-4712-8390-d3c180966f3b/dashboard.html",
             "blob:https://example.com/uuid",
             "",
             "   ",

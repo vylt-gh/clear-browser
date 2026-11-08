@@ -48,4 +48,5 @@ fun resolveAddress(raw: String, engine: SearchEngine): String? {
 private val SCHEMES = listOf(
     "http://", "https://", "about:", "data:", "file:", "javascript:",
     "intent:", "market:", "mailto:", "tel:", "sms:", "geo:", "maps:",
+    "moz-extension://", "resource://",
 )

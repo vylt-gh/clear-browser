@@ -19,7 +19,7 @@ sealed interface ExternalUrlAction {
 
 object ExternalUrlHandler {
     private val INTERNAL_SCHEMES = setOf(
-        "http", "https", "about", "data", "file", "javascript", "resource", "blob"
+        "http", "https", "about", "data", "file", "javascript", "resource", "blob", "moz-extension"
     )
 
     fun handle(

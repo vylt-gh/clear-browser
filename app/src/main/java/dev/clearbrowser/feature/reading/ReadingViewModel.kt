@@ -951,6 +951,24 @@ class ReadingViewModel(
         }
     }
 
+    fun openUBlockDashboard() {
+        _state.value = _state.value.copy(
+            extensionsVisible = false,
+            menuPopupVisible = false,
+            settingsVisible = false,
+        )
+        dev.clearbrowser.core.engine.ClearGeckoRuntime.getUBlockDashboardUrl { url ->
+            val target = url ?: dev.clearbrowser.core.engine.ClearGeckoRuntime.uBlockOptionsUrl
+            if (!target.isNullOrBlank()) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    navigate(target)
+                }
+            } else {
+                android.util.Log.w("ReadingViewModel", "uBlock dashboard URL not resolved yet")
+            }
+        }
+    }
+
     fun setOverlay(overlaid: Boolean) {
         if (overlaid) openMenuPopup() else closeMenuPopup()
     }

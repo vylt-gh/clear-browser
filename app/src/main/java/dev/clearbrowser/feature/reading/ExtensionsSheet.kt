@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.clearbrowser.R
+import kotlinx.coroutines.launch
 
 /**
  * Bottom sheet displaying installed and built-in extensions (uBlock Origin MV2).
@@ -43,10 +44,11 @@ import dev.clearbrowser.R
 @Composable
 fun ExtensionsSheet(
     onDismiss: () -> Unit,
-    onOpenUrl: (String) -> Unit,
+    onOpenDashboard: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -181,8 +183,10 @@ fun ExtensionsSheet(
 
                     Button(
                         onClick = {
-                            onDismiss()
-                            onOpenUrl("resource://android/assets/extensions/ublock/dashboard.html")
+                            coroutineScope.launch {
+                                sheetState.hide()
+                                onOpenDashboard()
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),

@@ -137,6 +137,9 @@ class MainActivity : ComponentActivity() {
             command == "extensions" || action == "dev.clearbrowser.ACTION_EXTENSIONS" -> {
                 viewModel.openExtensions()
             }
+            command == "ubo" || command == "ublock" || command == "dashboard" || action == "dev.clearbrowser.ACTION_UBO" -> {
+                viewModel.openUBlockDashboard()
+            }
             command == "bookmarks" || action == "dev.clearbrowser.ACTION_BOOKMARKS" -> {
                 viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.BOOKMARKS)
             }
@@ -303,6 +306,7 @@ class MainActivity : ComponentActivity() {
             onOpenSettings = viewModel::openSettings,
             onCloseSettings = viewModel::closeSettings,
             onClearBrowsingData = viewModel::clearBrowsingData,
+            onOpenUBlockDashboard = viewModel::openUBlockDashboard,
             onOpenTabs = viewModel::openTabs,
             onSelectTab = { id ->
                 // Selecting is also dismissing: the user picked a page to look
