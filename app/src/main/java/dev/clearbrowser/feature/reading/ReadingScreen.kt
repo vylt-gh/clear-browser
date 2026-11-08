@@ -111,6 +111,7 @@ fun ReadingScreen(
     onIncognitoChange: (Boolean) -> Unit,
     onDismissJsDialog: () -> Unit,
     onOmniboxQueryChange: (String) -> Unit = {},
+    onAppThemeChange: (dev.clearbrowser.core.data.AppTheme) -> Unit = {},
     onWebThemeChange: (dev.clearbrowser.core.data.WebTheme) -> Unit = {},
     onOpenFindInPage: () -> Unit = {},
     onCloseFindInPage: () -> Unit = {},
@@ -132,6 +133,10 @@ fun ReadingScreen(
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onRevokeSitePermission: (String, String) -> Unit = { _, _ -> },
     onClearAllSitePermissions: () -> Unit = {},
+    isDefaultBrowser: Boolean = false,
+    onRequestDefaultBrowser: () -> Unit = {},
+    onOpenOnboarding: () -> Unit = {},
+    onCompleteOnboarding: () -> Unit = {},
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (dev.clearbrowser.core.data.ChromeTheme) -> Unit = {},
     onHideHandleChange: (Boolean) -> Unit = {},
@@ -150,7 +155,12 @@ fun ReadingScreen(
     onCloseExtensionPopup: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val isDark = isSystemInDarkTheme()
+    val systemDark = isSystemInDarkTheme()
+    val isDark = when (state.settings.appTheme) {
+        dev.clearbrowser.core.data.AppTheme.SYSTEM -> systemDark
+        dev.clearbrowser.core.data.AppTheme.DARK -> true
+        dev.clearbrowser.core.data.AppTheme.LIGHT -> false
+    }
     LaunchedEffect(isDark) { onSystemDarkChange(isDark) }
 
     // The status bar height, used to place web content below the status bar.
@@ -459,6 +469,7 @@ fun ReadingScreen(
                     onDesktopSiteChange = onDesktopSiteChange,
                     onImmersiveChange = onImmersiveChange,
                     onIncognitoChange = onIncognitoChange,
+                    onAppThemeChange = onAppThemeChange,
                     onWebThemeChange = onWebThemeChange,
                     onTextZoomChange = onTextZoomChange,
                     onChromeThemeChange = onChromeThemeChange,
@@ -468,6 +479,9 @@ fun ReadingScreen(
                     sitePermissions = sitePermissions,
                     onRevokeSitePermission = onRevokeSitePermission,
                     onClearAllSitePermissions = onClearAllSitePermissions,
+                    isDefaultBrowser = isDefaultBrowser,
+                    onRequestDefaultBrowser = onRequestDefaultBrowser,
+                    onOpenOnboarding = onOpenOnboarding,
                 )
             }
 
@@ -527,6 +541,23 @@ fun ReadingScreen(
                     onExportBookmarks = onExportBookmarks,
                     onImportBookmarks = onImportBookmarks,
                     onDismiss = onCloseLibrary,
+                )
+            }
+
+            val showOnboarding = !state.settings.onboardingCompleted || state.onboardingVisible
+            if (showOnboarding) {
+                dev.clearbrowser.feature.onboarding.OnboardingScreen(
+                    settings = state.settings,
+                    isDefaultBrowser = isDefaultBrowser,
+                    importedBookmarksCount = state.importedBookmarksCount,
+                    onSearchEngineChange = onSearchEngineChange,
+                    onAppThemeChange = onAppThemeChange,
+                    onChromePositionChange = onChromePositionChange,
+                    onChromeThemeChange = onChromeThemeChange,
+                    onHideHandleChange = onHideHandleChange,
+                    onRequestDefaultBrowser = onRequestDefaultBrowser,
+                    onImportBookmarks = onImportBookmarks,
+                    onFinish = onCompleteOnboarding,
                 )
             }
         }

@@ -43,6 +43,13 @@ enum class ChromePosition {
     RIGHT,
 }
 
+/** Preferred theme for Clear Browser interface and chrome. */
+enum class AppTheme {
+    SYSTEM,
+    DARK,
+    LIGHT,
+}
+
 /** Preferred theme for web content (prefers-color-scheme). */
 enum class WebTheme {
     SYSTEM,
@@ -82,6 +89,9 @@ data class BrowserSettings(
      */
     val searchEngine: SearchEngine = SearchEngine.KAGI,
 
+    /** Preferred color scheme for the browser interface and chrome. */
+    val appTheme: AppTheme = AppTheme.SYSTEM,
+
     /** Preferred color scheme for websites (prefers-color-scheme). */
     val webTheme: WebTheme = WebTheme.SYSTEM,
 
@@ -96,6 +106,9 @@ data class BrowserSettings(
 
     /** Pull down from the top of the page to refresh. */
     val pullToRefresh: Boolean = true,
+
+    /** Whether the first-launch onboarding walkthrough has been completed or dismissed. */
+    val onboardingCompleted: Boolean = false,
 ) {
 }
 
@@ -126,6 +139,8 @@ class SettingsStore(context: Context) {
 
     fun setSearchEngine(engine: SearchEngine) = update { it.copy(searchEngine = engine) }
 
+    fun setAppTheme(theme: AppTheme) = update { it.copy(appTheme = theme) }
+
     fun setWebTheme(theme: WebTheme) = update { it.copy(webTheme = theme) }
 
     fun setTextZoom(zoom: Int) = update { it.copy(textZoom = zoom) }
@@ -135,6 +150,9 @@ class SettingsStore(context: Context) {
     fun setHideHandle(enabled: Boolean) = update { it.copy(hideHandle = enabled) }
 
     fun setPullToRefresh(enabled: Boolean) = update { it.copy(pullToRefresh = enabled) }
+
+    fun setOnboardingCompleted(completed: Boolean = true) =
+        update { it.copy(onboardingCompleted = completed) }
 
     fun setOriginalMaterial3Chrome(enabled: Boolean) =
         setChromeTheme(if (enabled) ChromeTheme.MATERIAL else ChromeTheme.CLEAR)
@@ -149,11 +167,13 @@ class SettingsStore(context: Context) {
             .putString(KEY_POSITION, next.chromePosition.name)
             .putBoolean(KEY_DYNAMIC, next.dynamicColor)
             .putString(KEY_SEARCH_ENGINE, next.searchEngine.name)
+            .putString(KEY_APP_THEME, next.appTheme.name)
             .putString(KEY_WEB_THEME, next.webTheme.name)
             .putInt(KEY_TEXT_ZOOM, next.textZoom)
             .putString(KEY_CHROME_THEME, next.chromeTheme.name)
             .putBoolean(KEY_HIDE_HANDLE, next.hideHandle)
             .putBoolean(KEY_PULL_TO_REFRESH, next.pullToRefresh)
+            .putBoolean(KEY_ONBOARDING_COMPLETED, next.onboardingCompleted)
             .apply()
     }
 
@@ -170,6 +190,9 @@ class SettingsStore(context: Context) {
         searchEngine = prefs.getString(KEY_SEARCH_ENGINE, null)
             ?.let { runCatching { SearchEngine.valueOf(it) }.getOrNull() }
             ?: SearchEngine.KAGI,
+        appTheme = prefs.getString(KEY_APP_THEME, null)
+            ?.let { runCatching { AppTheme.valueOf(it) }.getOrNull() }
+            ?: AppTheme.SYSTEM,
         webTheme = prefs.getString(KEY_WEB_THEME, null)
             ?.let { runCatching { WebTheme.valueOf(it) }.getOrNull() }
             ?: WebTheme.SYSTEM,
@@ -179,6 +202,7 @@ class SettingsStore(context: Context) {
             ?: if (prefs.getBoolean(KEY_ORIGINAL_M3_CHROME, false)) ChromeTheme.ACRYLIC else ChromeTheme.CLEAR,
         hideHandle = prefs.getBoolean(KEY_HIDE_HANDLE, false),
         pullToRefresh = prefs.getBoolean(KEY_PULL_TO_REFRESH, true),
+        onboardingCompleted = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false),
     )
 
     private companion object {
@@ -188,11 +212,13 @@ class SettingsStore(context: Context) {
         const val KEY_POSITION = "chrome_position"
         const val KEY_DYNAMIC = "dynamic_color"
         const val KEY_SEARCH_ENGINE = "search_engine"
+        const val KEY_APP_THEME = "app_theme"
         const val KEY_WEB_THEME = "web_theme"
         const val KEY_TEXT_ZOOM = "text_zoom"
         const val KEY_CHROME_THEME = "chrome_theme"
         const val KEY_HIDE_HANDLE = "hide_handle"
         const val KEY_PULL_TO_REFRESH = "pull_to_refresh"
         const val KEY_ORIGINAL_M3_CHROME = "original_material3_chrome"
+        const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
     }
 }

@@ -390,6 +390,14 @@ Landed in v0.9.0:
 - **Chrome Layout & Themed Tab Button**:
   - Bottom bar icon clustering with uniform 38dp touch targets and balanced spacing between Search Pill, Tabs, Reload, and Menu.
   - Tab counter redesigned into a perfect 30dp circle with theme-adaptive styling (`Clear` frosted border, `Acrylic`, and `Material`).
+- **First-Run Onboarding Tour & Interactive Live Preview (v0.10.0)**:
+  - 3-step setup walkthrough (`OnboardingScreen`) featuring the official circular "C" logo (`ic_clear_logo.png`).
+  - Interactive live dummy chrome preview demonstrating Chrome Theme and App Theme with real-time expand/minimize simulation.
+  - Native Default Browser integration via Android `RoleManager.ROLE_BROWSER` (API 29+) with legacy package manager fallback.
+  - Customizable minimized bar position (Left, Center, Right) and hide-on-scroll toggle.
+  - Re-visitation at any time via Settings sheet "Welcome tour".
+  - Dedicated App Theme controls (System, Dark, Light) independent of web content theming.
+  - Borderless Material tab counter button styling.
 
 ### Verified on device
 - Tabs: new tab, switch, close active / background / last, detach-and-reattach

@@ -1,27 +1,40 @@
 package dev.clearbrowser
 
 import android.app.DownloadManager
+import android.app.role.RoleManager
 import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.clearbrowser.core.data.BookmarkStore
@@ -218,6 +231,9 @@ class MainActivity : ComponentActivity() {
             command == "settings" || action == "dev.clearbrowser.ACTION_SETTINGS" -> {
                 viewModel.openSettings()
             }
+            command == "onboarding" || action == "dev.clearbrowser.ACTION_ONBOARDING" -> {
+                viewModel.openOnboarding()
+            }
             command == "extensions" || action == "dev.clearbrowser.ACTION_EXTENSIONS" -> {
                 viewModel.openExtensions()
             }
@@ -244,6 +260,15 @@ class MainActivity : ComponentActivity() {
             }
             command == "new_tab" || action == "dev.clearbrowser.ACTION_NEW_TAB" -> {
                 viewModel.newTab(intent.getStringExtra("url").orEmpty())
+            }
+            command == "app_theme" || action == "dev.clearbrowser.ACTION_SET_APP_THEME" -> {
+                val themeStr = intent.getStringExtra("theme")?.uppercase()
+                val theme = when (themeStr) {
+                    "DARK" -> dev.clearbrowser.core.data.AppTheme.DARK
+                    "LIGHT" -> dev.clearbrowser.core.data.AppTheme.LIGHT
+                    else -> dev.clearbrowser.core.data.AppTheme.SYSTEM
+                }
+                settings.setAppTheme(theme)
             }
             command == "theme" || action == "dev.clearbrowser.ACTION_SET_THEME" -> {
                 val themeStr = intent.getStringExtra("theme")?.uppercase()
@@ -396,6 +421,26 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        var isDefaultBrowser by remember { mutableStateOf(isDefaultBrowser()) }
+        val roleLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+        ) {
+            isDefaultBrowser = isDefaultBrowser()
+        }
+
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    isDefaultBrowser = isDefaultBrowser()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+
         // Recorded before the engine attaches, so the very first load is the
         // requested page rather than a detour through the start page.
         val startUrl = intent?.dataString
@@ -426,7 +471,12 @@ class MainActivity : ComponentActivity() {
             dev.clearbrowser.core.engine.ClearGeckoRuntime.setPreferredColorScheme(scheme)
         }
 
-        val isDark = isSystemInDarkTheme()
+        val systemDark = isSystemInDarkTheme()
+        val isDark = when (state.settings.appTheme) {
+            dev.clearbrowser.core.data.AppTheme.SYSTEM -> systemDark
+            dev.clearbrowser.core.data.AppTheme.DARK -> true
+            dev.clearbrowser.core.data.AppTheme.LIGHT -> false
+        }
         LaunchedEffect(state.isTopBarLight, state.isStartPage, isDark, state.topBarColor) {
             val lightBackground = if (state.isStartPage || state.topBarColor == null) {
                 !isDark
@@ -498,6 +548,10 @@ class MainActivity : ComponentActivity() {
             onCloseSettings = viewModel::closeSettings,
             onRevokeSitePermission = viewModel::revokeSitePermission,
             onClearAllSitePermissions = viewModel::clearAllSitePermissions,
+            isDefaultBrowser = isDefaultBrowser,
+            onRequestDefaultBrowser = { requestDefaultBrowser(roleLauncher) },
+            onOpenOnboarding = viewModel::openOnboarding,
+            onCompleteOnboarding = viewModel::completeOnboarding,
             onClearBrowsingData = { h, c, k ->
                 viewModel.clearBrowsingData(h, c, k)
                 Toast.makeText(this@MainActivity, R.string.toast_browsing_data_cleared, Toast.LENGTH_SHORT).show()
@@ -566,6 +620,7 @@ class MainActivity : ComponentActivity() {
             onIncognitoChange = viewModel::setIncognito,
             onDismissJsDialog = viewModel::dismissJsDialog,
             onOmniboxQueryChange = viewModel::onOmniboxQueryChanged,
+            onAppThemeChange = settings::setAppTheme,
             onWebThemeChange = settings::setWebTheme,
             onOpenFindInPage = viewModel::openFindInPage,
             onCloseFindInPage = viewModel::closeFindInPage,
@@ -605,6 +660,47 @@ class MainActivity : ComponentActivity() {
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } else {
             controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
+    private fun isDefaultBrowser(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = getSystemService(RoleManager::class.java)
+            roleManager?.isRoleHeld(RoleManager.ROLE_BROWSER) == true
+        } else {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://clearbrowser.dev"))
+            val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.resolveActivity(
+                    intent,
+                    PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            }
+            resolveInfo?.activityInfo?.packageName == packageName
+        }
+    }
+
+    private fun requestDefaultBrowser(launcher: ActivityResultLauncher<Intent>) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = getSystemService(RoleManager::class.java)
+            if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_BROWSER)) {
+                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_BROWSER)
+                launcher.launch(intent)
+                return
+            }
+        }
+        runCatching {
+            val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+            launcher.launch(intent)
+        }.onFailure {
+            runCatching {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                }
+                launcher.launch(intent)
+            }
         }
     }
 }

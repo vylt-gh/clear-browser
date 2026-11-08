@@ -6,6 +6,28 @@ import org.junit.Test
 class BrowserSettingsTest {
 
     @Test
+    fun defaultAppThemeIsSystem() {
+        val settings = BrowserSettings()
+        assertEquals(AppTheme.SYSTEM, settings.appTheme)
+    }
+
+    @Test
+    fun appThemeValuesAreAllDistinct() {
+        val themes = AppTheme.entries.toSet()
+        assertEquals(3, themes.size)
+        assertEquals(setOf(AppTheme.SYSTEM, AppTheme.DARK, AppTheme.LIGHT), themes)
+    }
+
+    @Test
+    fun customAppThemeIsRetained() {
+        val dark = BrowserSettings(appTheme = AppTheme.DARK)
+        assertEquals(AppTheme.DARK, dark.appTheme)
+
+        val light = BrowserSettings(appTheme = AppTheme.LIGHT)
+        assertEquals(AppTheme.LIGHT, light.appTheme)
+    }
+
+    @Test
     fun defaultWebThemeIsSystem() {
         val settings = BrowserSettings()
         assertEquals(WebTheme.SYSTEM, settings.webTheme)
@@ -74,5 +96,17 @@ class BrowserSettingsTest {
     fun customPullToRefreshIsRetained() {
         val settings = BrowserSettings(pullToRefresh = false)
         assertEquals(false, settings.pullToRefresh)
+    }
+
+    @Test
+    fun defaultOnboardingCompletedIsFalse() {
+        val settings = BrowserSettings()
+        assertEquals(false, settings.onboardingCompleted)
+    }
+
+    @Test
+    fun customOnboardingCompletedIsRetained() {
+        val settings = BrowserSettings(onboardingCompleted = true)
+        assertEquals(true, settings.onboardingCompleted)
     }
 }

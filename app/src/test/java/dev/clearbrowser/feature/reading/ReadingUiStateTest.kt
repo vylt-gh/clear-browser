@@ -15,6 +15,8 @@ class ReadingUiStateTest {
         assertFalse(state.menuPopupVisible)
         assertFalse(state.settingsVisible)
         assertFalse(state.extensionsVisible)
+        assertFalse(state.onboardingVisible)
+        org.junit.Assert.assertNull(state.importedBookmarksCount)
         org.junit.Assert.assertNull(state.extensionPopup)
         assertEquals("", state.findQuery)
         assertEquals(0, state.findActiveMatch)

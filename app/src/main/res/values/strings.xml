@@ -17,12 +17,12 @@
 
     <string name="menu_search_engine">Search engine</string>
     <string name="menu_search_engine_subtitle">Where words you type that are not addresses are sent.</string>
-    <string name="menu_chrome_position">Handle position</string>
-    <string name="menu_chrome_position_subtitle">Where the small button sits while you read, so it does not cover a site\'s own controls.</string>
+    <string name="menu_chrome_position">Minimized bar position</string>
+    <string name="menu_chrome_position_subtitle">Where the minimized button sits when you scroll, so it does not cover page controls.</string>
 
-    <string name="chrome_position_left">Handle on the left</string>
-    <string name="chrome_position_center">Handle in the centre</string>
-    <string name="chrome_position_right">Handle on the right</string>
+    <string name="chrome_position_left">Dock on the left</string>
+    <string name="chrome_position_center">Dock in the centre</string>
+    <string name="chrome_position_right">Dock on the right</string>
     <string name="menu_bookmark_page">Bookmark this page</string>
     <string name="menu_bookmarked_page">Bookmarked</string>
     <string name="menu_bookmark_subtitle">Save it for one tap later</string>
@@ -56,8 +56,8 @@
 
     <string name="menu_auto_hide">Hide controls while reading</string>
     <string name="menu_auto_hide_subtitle">Fade the bar away as you scroll down</string>
-    <string name="menu_hide_handle">Hide handle when reading</string>
-    <string name="menu_hide_handle_subtitle">Completely hide the button while scrolling; scroll up to reveal</string>
+    <string name="menu_hide_handle">Hide minimized button while reading</string>
+    <string name="menu_hide_handle_subtitle">Completely hide the button when scrolling down; scroll up to reveal</string>
     <string name="menu_pull_to_refresh">Pull to refresh</string>
     <string name="menu_pull_to_refresh_subtitle">Pull down from the top of a page to reload</string>
     <string name="menu_immersive">Full screen</string>
@@ -84,6 +84,11 @@
 
     <string name="menu_find_in_page">Find in page</string>
     <string name="menu_find_in_page_subtitle">Search text on current page</string>
+    <string name="menu_app_theme">App theme</string>
+    <string name="menu_app_theme_subtitle">Theme for navigation chrome, sheets, and menus</string>
+    <string name="app_theme_system">System</string>
+    <string name="app_theme_dark">Dark</string>
+    <string name="app_theme_light">Light</string>
     <string name="menu_web_theme">Web content theme</string>
     <string name="menu_web_theme_subtitle">Tell websites whether to use dark or light mode</string>
     <string name="web_theme_system">System</string>
@@ -101,6 +106,10 @@
     <string name="menu_extensions">Extensions</string>
     <string name="menu_settings">Settings</string>
     <string name="settings_title">Settings</string>
+    <string name="settings_default_browser">Default browser app</string>
+    <string name="settings_default_browser_current">Clear is currently your default browser</string>
+    <string name="settings_default_browser_set">Open web links in Clear by default</string>
+    <string name="settings_default_browser_action">Set as default</string>
     <string name="settings_clear_data">Clear browsing data</string>
     <string name="settings_clear_data_subtitle">Clear cookies, cache, and site data</string>
     <string name="settings_clear_data_confirm_title">Clear browsing data?</string>
@@ -155,4 +164,30 @@
     <string name="settings_site_permissions_empty">No websites currently have saved permissions</string>
     <string name="settings_site_permissions_revoke">Revoke</string>
     <string name="settings_site_permissions_revoke_all">Revoke all</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_get_started">Start browsing</string>
+    <string name="onboarding_welcome_title">Welcome to Clear</string>
+    <string name="onboarding_welcome_subtitle">A minimal, fast browser built for distraction-free reading.</string>
+    <string name="onboarding_feature_adblock_title">Built-in ad &amp; tracker blocking</string>
+    <string name="onboarding_feature_adblock_desc">uBlock Origin is pre-installed to block ads, banners, and malicious scripts natively.</string>
+    <string name="onboarding_feature_privacy_title">Zero telemetry, local-first</string>
+    <string name="onboarding_feature_privacy_desc">No accounts, no analytics, and no remote servers tracking what you read.</string>
+    <string name="onboarding_search_title">Choose your search engine</string>
+    <string name="onboarding_search_subtitle">You can change this anytime in Settings.</string>
+    <string name="onboarding_customize_title">Tailor your interface</string>
+    <string name="onboarding_customize_subtitle">Pick how your navigation bar looks and sits.</string>
+    <string name="onboarding_preview_title">Live bar preview</string>
+    <string name="onboarding_preview_hint">Tap the bar to preview minimized state</string>
+    <string name="onboarding_finish_title">Make it yours</string>
+    <string name="onboarding_finish_subtitle">Bring your data and make Clear your default browser.</string>
+    <string name="onboarding_import_bookmarks_title">Import bookmarks</string>
+    <string name="onboarding_import_bookmarks_desc">Moving from Chrome, Firefox, or Safari? Select an exported HTML bookmarks file.</string>
+    <string name="onboarding_import_bookmarks_action">Import file</string>
+    <string name="onboarding_import_bookmarks_success">%1$d bookmarks imported!</string>
+    <string name="settings_welcome_tour">Welcome tour</string>
+    <string name="settings_welcome_tour_subtitle">Revisit the initial setup and feature overview</string>
 </resources>

@@ -100,6 +100,10 @@ data class ReadingUiState(
     val extensionPopup: ExtensionPopupState? = null,
     /** Cached favicons for open tabs. */
     val favicons: Map<String, Bitmap> = emptyMap(),
+    /** Whether the first-run onboarding screen is visible. */
+    val onboardingVisible: Boolean = false,
+    /** Count of bookmarks imported in the current session, or null if none imported yet. */
+    val importedBookmarksCount: Int? = null,
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -1038,6 +1042,24 @@ class ReadingViewModel(
         }
     }
 
+    fun openOnboarding() {
+        _state.value = _state.value.copy(
+            onboardingVisible = true,
+            settingsVisible = false,
+            menuPopupVisible = false,
+            extensionsVisible = false,
+            libraryTab = null,
+            tabsVisible = false,
+        )
+    }
+
+    fun completeOnboarding() {
+        settingsStore.setOnboardingCompleted(true)
+        if (_state.value.onboardingVisible) {
+            _state.value = _state.value.copy(onboardingVisible = false)
+        }
+    }
+
     fun openExtensions() {
         _state.value = _state.value.copy(
             extensionsVisible = true,
@@ -1691,7 +1713,13 @@ class ReadingViewModel(
 
     fun exportBookmarksHtml(): String = bookmarkStore?.exportHtml().orEmpty()
 
-    fun importBookmarks(content: String): Int = bookmarkStore?.importBookmarks(content) ?: 0
+    fun importBookmarks(content: String): Int {
+        val count = bookmarkStore?.importBookmarks(content) ?: 0
+        if (count > 0) {
+            _state.value = _state.value.copy(importedBookmarksCount = count)
+        }
+        return count
+    }
 
     fun revokeSitePermission(origin: String, type: String) {
         sitePermissionStore?.revoke(origin, type)

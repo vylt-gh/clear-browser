@@ -3,6 +3,7 @@ package dev.clearbrowser.feature.reading
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,8 +21,11 @@ import androidx.compose.material.icons.automirrored.rounded.AlignHorizontalRight
 import androidx.compose.material.icons.rounded.AlignHorizontalCenter
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Shield
@@ -32,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +62,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.clearbrowser.R
+import dev.clearbrowser.core.data.AppTheme
 import dev.clearbrowser.core.data.ChromePosition
 import dev.clearbrowser.core.data.ChromeTheme
 import dev.clearbrowser.core.data.SearchEngine
@@ -78,6 +84,7 @@ fun SettingsSheet(
     onDesktopSiteChange: (Boolean) -> Unit,
     onImmersiveChange: (Boolean) -> Unit,
     onIncognitoChange: (Boolean) -> Unit,
+    onAppThemeChange: (AppTheme) -> Unit = {},
     onWebThemeChange: (WebTheme) -> Unit,
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (ChromeTheme) -> Unit = {},
@@ -87,6 +94,9 @@ fun SettingsSheet(
     sitePermissions: List<dev.clearbrowser.core.data.SitePermission> = emptyList(),
     onRevokeSitePermission: (String, String) -> Unit = { _, _ -> },
     onClearAllSitePermissions: () -> Unit = {},
+    isDefaultBrowser: Boolean = false,
+    onRequestDefaultBrowser: () -> Unit = {},
+    onOpenOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -132,6 +142,13 @@ fun SettingsSheet(
                 )
             }
 
+            DefaultBrowserRow(
+                isDefault = isDefaultBrowser,
+                onClick = onRequestDefaultBrowser,
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
             SearchEngineControl(
                 selected = settings.searchEngine,
                 onSelect = onSearchEngineChange,
@@ -149,6 +166,13 @@ fun SettingsSheet(
             ChromeThemeControl(
                 selected = settings.chromeTheme,
                 onSelect = onChromeThemeChange,
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            AppThemeControl(
+                selected = settings.appTheme,
+                onSelect = onAppThemeChange,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -223,8 +247,14 @@ fun SettingsSheet(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
+            WelcomeTourRow(
+                onClick = onOpenOnboarding,
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
             AboutSection(
-                appVersion = "0.8.0",
+                appVersion = "0.10.0",
                 engineVersion = dev.clearbrowser.core.engine.ClearGeckoRuntime.geckoViewVersion,
             )
         }
@@ -589,6 +619,67 @@ private fun ChromeThemeControl(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun AppThemeControl(
+    selected: AppTheme,
+    onSelect: (AppTheme) -> Unit,
+) {
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Text(
+            text = stringResource(R.string.menu_app_theme),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.menu_app_theme_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+        ) {
+            AppTheme.entries.forEachIndexed { index, theme ->
+                SegmentedButton(
+                    selected = selected == theme,
+                    onClick = { onSelect(theme) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = AppTheme.entries.size,
+                    ),
+                    icon = {},
+                    label = {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = when (theme) {
+                                    AppTheme.SYSTEM -> Icons.Rounded.BrightnessAuto
+                                    AppTheme.DARK -> Icons.Rounded.DarkMode
+                                    AppTheme.LIGHT -> Icons.Rounded.LightMode
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                text = when (theme) {
+                                    AppTheme.SYSTEM -> stringResource(R.string.app_theme_system)
+                                    AppTheme.DARK -> stringResource(R.string.app_theme_dark)
+                                    AppTheme.LIGHT -> stringResource(R.string.app_theme_light)
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun WebThemeControl(
     selected: WebTheme,
     onSelect: (WebTheme) -> Unit,
@@ -716,6 +807,62 @@ private fun ClearDataRow(onClick: () -> Unit) {
 }
 
 @Composable
+private fun DefaultBrowserRow(
+    isDefault: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = !isDefault, onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Language,
+            contentDescription = null,
+            tint = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_default_browser),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(
+                    if (isDefault) R.string.settings_default_browser_current
+                    else R.string.settings_default_browser_set
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (isDefault) {
+            Icon(
+                imageVector = Icons.Rounded.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+        } else {
+            FilledTonalButton(
+                onClick = onClick,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_default_browser_action),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SitePermissionsRow(
     permissionsCount: Int,
     onClick: () -> Unit,
@@ -755,6 +902,40 @@ private fun SitePermissionsRow(
 }
 
 @Composable
+private fun WelcomeTourRow(
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Explore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_welcome_tour),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(R.string.settings_welcome_tour_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
 private fun AboutSection(
     appVersion: String,
     engineVersion: String,
@@ -763,28 +944,46 @@ private fun AboutSection(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = stringResource(R.string.settings_about_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Text(
-            text = "Clear Browser v$appVersion",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = stringResource(R.string.settings_engine_version, engineVersion),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = "Engine updates track Mozilla GeckoView release milestones.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_clear_logo),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = "Clear Browser v$appVersion",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(R.string.settings_engine_version, engineVersion),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "Engine updates track Mozilla GeckoView release milestones.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+        }
     }
 }
 

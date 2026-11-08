@@ -75,12 +75,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import dev.clearbrowser.R
+import dev.clearbrowser.core.data.AppTheme
 import dev.clearbrowser.core.data.BrowserSettings
 import dev.clearbrowser.core.data.ChromePosition
 import dev.clearbrowser.core.data.ChromeTheme
 import dev.clearbrowser.core.data.SearchSuggestion
 import dev.clearbrowser.core.theme.chromeFadeSpec
 import dev.clearbrowser.core.theme.chromeMorphSpring
+
+internal fun resolveIsDark(appTheme: AppTheme, systemDark: Boolean): Boolean = when (appTheme) {
+    AppTheme.SYSTEM -> systemDark
+    AppTheme.DARK -> true
+    AppTheme.LIGHT -> false
+}
 
 /**
  * The chrome, as one continuous surface.
@@ -197,7 +204,7 @@ fun ChromeSurface(
         val currentWidth = lerpDp(handleWidth, expandedWidth, progress)
         val currentOffset = lerpDp(handleOffset, 0.dp, progress)
 
-        val isDark = isSystemInDarkTheme()
+        val isDark = resolveIsDark(state.settings.appTheme, isSystemInDarkTheme())
         val chromeTheme = state.settings.chromeTheme
         val hideHandle = state.settings.hideHandle
         val hideOffsetY = if (hideHandle) lerpDp(HANDLE_SIZE + HANDLE_MARGIN * 3, 0.dp, progress) else 0.dp
@@ -242,6 +249,7 @@ fun ChromeSurface(
                         onQueryChange(text)
                     },
                     chromeTheme = chromeTheme,
+                    isDark = isDark,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
@@ -442,7 +450,7 @@ private fun CompactBar(
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            val isDark = isSystemInDarkTheme()
+            val isDark = resolveIsDark(state.settings.appTheme, isSystemInDarkTheme())
             val chromeTheme = state.settings.chromeTheme
             val addressPillBackground = when (chromeTheme) {
                 ChromeTheme.CLEAR -> if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
@@ -523,6 +531,7 @@ private fun CompactBar(
                         count = state.tabs.size,
                         onClick = onOpenTabs,
                         chromeTheme = chromeTheme,
+                        isDark = isDark,
                     )
                 }
 
@@ -680,7 +689,7 @@ private fun ExpandedOmnibox(
 }
 
 @Composable
-private fun rememberFrostedGlassBrushes(isDark: Boolean): Pair<Brush, Brush> {
+internal fun rememberFrostedGlassBrushes(isDark: Boolean): Pair<Brush, Brush> {
     return remember(isDark) {
         val background = if (isDark) {
             Brush.verticalGradient(
@@ -728,9 +737,9 @@ private fun SuggestionsCard(
     onSelect: (SearchSuggestion) -> Unit,
     onInsert: (String) -> Unit,
     chromeTheme: ChromeTheme = ChromeTheme.CLEAR,
+    isDark: Boolean = isSystemInDarkTheme(),
     modifier: Modifier = Modifier,
 ) {
-    val isDark = isSystemInDarkTheme()
     val shape = RoundedCornerShape(24.dp)
     val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
     val colorScheme = MaterialTheme.colorScheme

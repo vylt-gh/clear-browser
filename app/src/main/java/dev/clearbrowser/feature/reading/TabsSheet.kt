@@ -262,9 +262,9 @@ fun TabCounter(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     chromeTheme: ChromeTheme = ChromeTheme.CLEAR,
+    isDark: Boolean = isSystemInDarkTheme(),
 ) {
     val description = pluralStringResource(R.plurals.tabs_count, count, count)
-    val isDark = isSystemInDarkTheme()
 
     val background = when (chromeTheme) {
         ChromeTheme.CLEAR -> if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.06f)
@@ -281,10 +281,7 @@ fun TabCounter(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
         )
-        ChromeTheme.MATERIAL -> BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
-        )
+        ChromeTheme.MATERIAL -> null
     }
 
     Box(
@@ -292,7 +289,7 @@ fun TabCounter(
             .size(30.dp)
             .clip(CircleShape)
             .background(background)
-            .border(border, CircleShape)
+            .then(if (border != null) Modifier.border(border, CircleShape) else Modifier)
             // The visible content is a bare number, which a screen reader would
             // read as "three" with no hint of what tapping it does.
             .clickable(onClick = onClick)
