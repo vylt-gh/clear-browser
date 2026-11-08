@@ -415,9 +415,8 @@ private fun CompactBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 4.dp, end = 4.dp),
+            .padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         if (expanded) {
             ExpandedOmnibox(
@@ -429,12 +428,19 @@ private fun CompactBar(
             )
         } else {
             val canBack = !state.isStartPage
-            IconButton(onClick = onBack, enabled = canBack) {
+            IconButton(
+                onClick = onBack,
+                enabled = canBack,
+                modifier = Modifier.size(38.dp),
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = stringResource(R.string.chrome_back),
+                    modifier = Modifier.size(20.dp),
                 )
             }
+
+            Spacer(modifier = Modifier.width(6.dp))
 
             val isDark = isSystemInDarkTheme()
             val chromeTheme = state.settings.chromeTheme
@@ -502,56 +508,76 @@ private fun CompactBar(
                 )
             }
 
-            // Between the address and reload: it belongs to the row of
-            // controls on the right, and the address pill keeps all the width
-            // that is left. On a narrow phone the count is two characters at
-            // most, so this costs the URL almost nothing.
-            TabCounter(
-                count = state.tabs.size,
-                onClick = onOpenTabs,
-                modifier = Modifier.padding(horizontal = 2.dp),
-            )
+            Spacer(modifier = Modifier.width(8.dp))
 
-            IconButton(onClick = { if (state.isLoading) onStop() else onReload() }) {
-                Icon(
-                    imageVector = if (state.isLoading) Icons.Rounded.Close else Icons.Rounded.Refresh,
-                    contentDescription = stringResource(
-                        if (state.isLoading) R.string.chrome_reload_stop else R.string.chrome_reload,
-                    ),
-                )
-            }
-
-            Box {
-                IconButton(onClick = onMenu) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = stringResource(R.string.chrome_menu),
+            // Right-side controls (Tabs, Reload, Menu) with uniform 38dp slot sizes and consistent spacing
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Box(
+                    modifier = Modifier.size(38.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TabCounter(
+                        count = state.tabs.size,
+                        onClick = onOpenTabs,
+                        chromeTheme = chromeTheme,
                     )
                 }
 
-                if (state.menuPopupVisible) {
-                    Popup(
-                        popupPositionProvider = ChromePopupPositionProvider(LocalDensity.current),
-                        onDismissRequest = onDismissMenuPopup,
-                        properties = PopupProperties(focusable = true),
+                IconButton(
+                    onClick = { if (state.isLoading) onStop() else onReload() },
+                    modifier = Modifier.size(38.dp),
+                ) {
+                    Icon(
+                        imageVector = if (state.isLoading) Icons.Rounded.Close else Icons.Rounded.Refresh,
+                        contentDescription = stringResource(
+                            if (state.isLoading) R.string.chrome_reload_stop else R.string.chrome_reload,
+                        ),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+
+                Box(
+                    modifier = Modifier.size(38.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    IconButton(
+                        onClick = onMenu,
+                        modifier = Modifier.size(38.dp),
                     ) {
-                        ChromePopupMenu(
-                            visible = true,
-                            canBookmark = state.canBookmark,
-                            isBookmarked = state.isBookmarked,
-                            canShare = state.url.isNotBlank() && !state.isStartPage,
-                            onToggleBookmark = onToggleBookmark,
-                            onDismiss = onDismissMenuPopup,
-                            onBookmarks = onBookmarks,
-                            onHistory = onHistory,
-                            onDownloads = onDownloads,
-                            onExtensions = onExtensions,
-                            onFindInPage = onFindInPage,
-                            onShare = onSharePage,
-                            onCopyLink = onCopyLink,
-                            onSettings = onSettings,
-                            chromeTheme = chromeTheme,
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.chrome_menu),
+                            modifier = Modifier.size(20.dp),
                         )
+                    }
+
+                    if (state.menuPopupVisible) {
+                        Popup(
+                            popupPositionProvider = ChromePopupPositionProvider(LocalDensity.current),
+                            onDismissRequest = onDismissMenuPopup,
+                            properties = PopupProperties(focusable = true),
+                        ) {
+                            ChromePopupMenu(
+                                visible = true,
+                                canBookmark = state.canBookmark,
+                                isBookmarked = state.isBookmarked,
+                                canShare = state.url.isNotBlank() && !state.isStartPage,
+                                onToggleBookmark = onToggleBookmark,
+                                onDismiss = onDismissMenuPopup,
+                                onBookmarks = onBookmarks,
+                                onHistory = onHistory,
+                                onDownloads = onDownloads,
+                                onExtensions = onExtensions,
+                                onFindInPage = onFindInPage,
+                                onShare = onSharePage,
+                                onCopyLink = onCopyLink,
+                                onSettings = onSettings,
+                                chromeTheme = chromeTheme,
+                            )
+                        }
                     }
                 }
             }

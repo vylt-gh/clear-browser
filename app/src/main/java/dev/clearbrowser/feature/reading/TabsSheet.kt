@@ -1,16 +1,23 @@
 package dev.clearbrowser.feature.reading
 
+import android.graphics.Bitmap
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -18,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,8 +39,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import dev.clearbrowser.core.data.ChromeTheme
+import dev.clearbrowser.core.data.extractFaviconHost
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -66,6 +80,7 @@ fun TabsSheet(
     onClose: (Long) -> Unit,
     onNewTab: () -> Unit,
     onDismiss: () -> Unit,
+    favicons: Map<String, Bitmap> = emptyMap(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -107,9 +122,12 @@ fun TabsSheet(
 
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 items(tabs, key = { it.id }) { tab ->
+                    val host = extractFaviconHost(tab.url) ?: ""
+                    val favicon = if (host.isNotEmpty()) favicons[host] else null
                     TabRow(
                         tab = tab,
                         active = tab.id == activeTabId,
+                        favicon = favicon,
                         onSelect = { onSelect(tab.id) },
                         onClose = { onClose(tab.id) },
                     )
@@ -123,6 +141,7 @@ fun TabsSheet(
 private fun TabRow(
     tab: Tab,
     active: Boolean,
+    favicon: Bitmap?,
     onSelect: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -144,10 +163,61 @@ private fun TabRow(
                 if (active) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent,
             )
             .clickable(onClick = onSelect)
-            .padding(start = 14.dp, end = 4.dp)
+            .padding(start = 12.dp, end = 4.dp)
             .height(60.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Leading slot: Favicon or Monogram badge (32dp slot for aligned text guides)
+        Box(
+            modifier = Modifier.size(32.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (favicon != null) {
+                Image(
+                    bitmap = favicon.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(6.dp)),
+                )
+            } else {
+                val isBlank = tab.url.isBlank() || tab.url == "about:blank"
+                val initial = (host.firstOrNull() ?: title.firstOrNull() ?: '•')
+                    .uppercaseChar()
+                    .toString()
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (active) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                            else MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isBlank) {
+                        Icon(
+                            imageVector = Icons.Rounded.Explore,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Text(
+                            text = initial,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -191,13 +261,38 @@ fun TabCounter(
     count: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    chromeTheme: ChromeTheme = ChromeTheme.CLEAR,
 ) {
     val description = pluralStringResource(R.plurals.tabs_count, count, count)
+    val isDark = isSystemInDarkTheme()
+
+    val background = when (chromeTheme) {
+        ChromeTheme.CLEAR -> if (isDark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.06f)
+        ChromeTheme.ACRYLIC -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+        ChromeTheme.MATERIAL -> MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+
+    val border = when (chromeTheme) {
+        ChromeTheme.CLEAR -> BorderStroke(
+            1.dp,
+            if (isDark) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.12f),
+        )
+        ChromeTheme.ACRYLIC -> BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+        )
+        ChromeTheme.MATERIAL -> BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
+        )
+    }
+
     Box(
         modifier = modifier
-            .size(width = 32.dp, height = 30.dp)
+            .size(30.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .background(background)
+            .border(border, CircleShape)
             // The visible content is a bare number, which a screen reader would
             // read as "three" with no hint of what tapping it does.
             .clickable(onClick = onClick)
@@ -212,7 +307,10 @@ fun TabCounter(
     ) {
         Text(
             text = if (count > 99) "99" else count.toString(),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+            ),
             color = MaterialTheme.colorScheme.onSurface,
         )
     }

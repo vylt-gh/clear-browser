@@ -6,13 +6,13 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat&logo=android&logoColor=white" alt="Platform: Android" />
-  <img src="https://img.shields.io/badge/Release-v0.8.0-blue?style=flat&logo=github" alt="Release: v0.8.0" />
+  <img src="https://img.shields.io/badge/Release-v0.9.0-blue?style=flat&logo=github" alt="Release: v0.9.0" />
   <img src="https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?style=flat&logo=kotlin&logoColor=white" alt="Kotlin 2.3.20" />
   <img src="https://img.shields.io/badge/Engine-Mozilla%20GeckoView-FF7139?style=flat&logo=firefox&logoColor=white" alt="Engine: Mozilla GeckoView" />
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-110%20passing-success" alt="Tests: 110 passing" />
+  <img src="https://img.shields.io/badge/Tests-123%20passing-success" alt="Tests: 123 passing" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat" alt="License: MIT" />
 </p>
 
@@ -195,7 +195,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 110 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 123 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records
@@ -207,7 +207,26 @@ clear-browser/
 
 ## Releases & Changelog
 
-### v0.8.0 (Latest)
+### v0.9.0 (Latest)
+- **Canopy Pull-to-Refresh**:
+  - Natural overscroll physics with rubber-band damping pulling the page header downward.
+  - Expanding status bar canopy dynamically matched to the webpage's sampled top bar color (or theme surface on the start page) with a centered spring refresh indicator.
+  - Smooth non-blocking reload lifecycle that springs closed with an alpha fade (preventing stuck refresh spinners).
+  - Canopy color continuity across navigations and reloads: preserves the previous page color until the new page's top color is extrapolated, eliminating flashes of black.
+  - Configurable "Pull to refresh" toggle in the Settings bottom sheet.
+- **Privacy-First Favicons & Tab Switcher Icons**:
+  - Direct-to-host favicon loading (`https://${host}/favicon.ico`) with zero telemetry, zero logging, and zero third-party proxy lookups (no Google or DuckDuckGo proxy leaks).
+  - In-house `FaviconDecoder` & `IcoParser` capable of decoding both standard PNG/WEBP/JPEG and multi-entry Windows `.ico` containers (embedded PNGs and 1-bit, 4-bit, 8-bit, 24-bit, and 32-bit DIB entries with alpha masks) with zero third-party image dependencies.
+  - Two-tier caching with in-memory `LruCache` (capacity 60) and persistent disk cache (`cacheDir/favicons/`).
+  - Strict private browsing isolation: incognito tabs never read from or write favicons to disk.
+  - Redesigned tab row layout with a fixed $32\text{dp}$ guide slot displaying crisp favicons, stylish circular monogram letter badges for sites without icons, and a compass icon for blank/start tabs.
+- **Chrome Layout & Themed Tab Button**:
+  - Re-proportioned bottom chrome icon layout: increased breathing room between the search pill and action buttons, with uniform $38\text{dp} \times 38\text{dp}$ touch slots and balanced center-to-center spacing between Tabs, Reload, and Menu.
+  - Redesigned the tab counter into a perfect $30\text{dp}$ circle with theme-adaptive styling matching `ChromeTheme.CLEAR` (frosted glass surface with specular border), `ACRYLIC`, and `MATERIAL`.
+- **Expanded Unit Test Suite**:
+  - 123 pure Kotlin unit tests passing across 18 test suites covering pull-to-refresh damping physics, favicon ICO container decoding, DIB pixel unpacking, and host extraction.
+
+### v0.8.0
 - **Dynamic Extension Action Popups**: WebExtension popups (such as uBlock Origin's quick controls/dashboard and Dark Reader) now open in a responsive modal bottom sheet attached directly to the active web tab. Features like uBlock's element zapper, picker, and per-site switches interact seamlessly with the live page.
 - **Dual Extension Controls**: Each installed extension card in the Extensions sheet now displays separate quick-action and settings buttons:
   - **Popup / Action**: Triggers the extension's interactive popup for the active tab.

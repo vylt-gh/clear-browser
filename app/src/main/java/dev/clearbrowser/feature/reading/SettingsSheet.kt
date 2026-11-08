@@ -82,6 +82,7 @@ fun SettingsSheet(
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (ChromeTheme) -> Unit = {},
     onHideHandleChange: (Boolean) -> Unit = {},
+    onPullToRefreshChange: (Boolean) -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit,
     sitePermissions: List<dev.clearbrowser.core.data.SitePermission> = emptyList(),
     onRevokeSitePermission: (String, String) -> Unit = { _, _ -> },
@@ -177,6 +178,12 @@ fun SettingsSheet(
                 subtitle = stringResource(R.string.menu_hide_handle_subtitle),
                 checked = settings.hideHandle,
                 onCheckedChange = onHideHandleChange,
+            )
+            SwitchRow(
+                title = stringResource(R.string.menu_pull_to_refresh),
+                subtitle = stringResource(R.string.menu_pull_to_refresh_subtitle),
+                checked = settings.pullToRefresh,
+                onCheckedChange = onPullToRefreshChange,
             )
             SwitchRow(
                 title = stringResource(R.string.menu_incognito),

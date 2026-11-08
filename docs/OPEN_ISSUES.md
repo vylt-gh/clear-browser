@@ -373,6 +373,24 @@ Landed in v0.8.0:
 - Dedicated Downloads manager tab in the Library sheet tracking downloads in real-time.
 - Hierarchical back navigation: walks backwards through history, returns to `about:blank`, and exits only when backing out from the start page.
 
+### Canopy Pull-to-Refresh & Privacy-First Favicons
+Landed in v0.9.0:
+- **Canopy Pull-to-Refresh**:
+  - Overscroll pull gesture damped with logarithmic-like rubber-band physics pulling the top web container downward when scrolled to the top.
+  - Expanding status bar canopy linked to the sampled `topBarColor` (or theme surface on the start page), complete with a spring refresh spinner and tactile haptic trigger threshold.
+  - Color continuity: preserves the previous page's top color during reloads and navigations until a new color is sampled, eliminating flashes of black.
+  - Lifecycle management: single managed coroutine animates the canopy back to 0px while fading alpha, eliminating stuck spinner states.
+  - Configurable toggle in the Settings bottom sheet.
+- **Privacy-First Favicons (`FaviconStore` & `IcoParser`)**:
+  - Direct connection to `https://${host}/favicon.ico` without third-party proxies, remote resolvers, or telemetry.
+  - Pure Kotlin `IcoParser` decodes multi-entry Windows ICO containers (embedded PNGs, 1-bit, 4-bit, 8-bit, 24-bit, and 32-bit DIB bitmaps with alpha masks) without third-party image libraries.
+  - Two-tier cache: in-memory `LruCache` (60 entries) and disk cache (`cacheDir/favicons/`).
+  - Private tabs never write to or read from disk.
+  - Tab switcher layout updated with a fixed 32dp guide slot, sharp favicons, monogram letter fallbacks, and a compass icon for blank tabs.
+- **Chrome Layout & Themed Tab Button**:
+  - Bottom bar icon clustering with uniform 38dp touch targets and balanced spacing between Search Pill, Tabs, Reload, and Menu.
+  - Tab counter redesigned into a perfect 30dp circle with theme-adaptive styling (`Clear` frosted border, `Acrylic`, and `Material`).
+
 ### Verified on device
 - Tabs: new tab, switch, close active / background / last, detach-and-reattach
   keeps the page, `last.json` writes `tabs[]` with the right `active` index, and

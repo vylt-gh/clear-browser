@@ -1,8 +1,13 @@
 package dev.clearbrowser.feature.reading
 
 import android.content.Context
+import android.os.SystemClock
+import android.view.HapticFeedbackConstants
 import android.view.ViewGroup
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -16,25 +21,46 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.clearbrowser.JsDialogHost
+import dev.clearbrowser.R
 import dev.clearbrowser.core.data.ChromePosition
+import dev.clearbrowser.core.engine.LoadState
 import dev.clearbrowser.core.engine.WebContainer
 import dev.clearbrowser.core.theme.ClearBrowserTheme
 import dev.clearbrowser.core.theme.chromeFadeSpec
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * The reading surface: web content edge to edge, with chrome that leaves.
@@ -109,6 +135,7 @@ fun ReadingScreen(
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (dev.clearbrowser.core.data.ChromeTheme) -> Unit = {},
     onHideHandleChange: (Boolean) -> Unit = {},
+    onPullToRefreshChange: (Boolean) -> Unit = {},
     onSharePage: () -> Unit = {},
     onCopyLink: () -> Unit = {},
     onShareUrl: (String, String) -> Unit = { _, _ -> },
@@ -129,6 +156,90 @@ fun ReadingScreen(
     // The status bar height, used to place web content below the status bar.
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
+    val coroutineScope = rememberCoroutineScope()
+    val pullOffsetAnim = remember { Animatable(0f) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    var hasHapticTriggered by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val view = LocalView.current
+    var refreshJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+    val triggerThresholdPx = remember(density) { with(density) { 72.dp.toPx() } }
+    val restingLoadingHeightPx = remember(density) { with(density) { 48.dp.toPx() } }
+
+    val handlePullProgress: (Float, Float) -> Unit = { offsetPx, thresholdPx ->
+        if (!isRefreshing) {
+            coroutineScope.launch {
+                pullOffsetAnim.snapTo(offsetPx)
+            }
+            if (offsetPx >= thresholdPx) {
+                if (!hasHapticTriggered) {
+                    hasHapticTriggered = true
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                }
+            } else {
+                hasHapticTriggered = false
+            }
+        }
+    }
+
+    val handlePullRelease: (Boolean) -> Unit = { triggered ->
+        hasHapticTriggered = false
+        refreshJob?.cancel()
+        if (triggered && !isRefreshing) {
+            isRefreshing = true
+            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+            refreshJob = coroutineScope.launch {
+                pullOffsetAnim.animateTo(
+                    targetValue = restingLoadingHeightPx,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                )
+                val start = SystemClock.uptimeMillis()
+                onReload()
+
+                // Wait for the reload to start and complete, ensuring a minimum display
+                // duration of 400ms and a 3.5s safety timeout so it never hangs.
+                while (state.loadState == LoadState.LOADING || (SystemClock.uptimeMillis() - start < 400L)) {
+                    delay(50L)
+                    if (SystemClock.uptimeMillis() - start > 3500L) break
+                }
+
+                // Smoothly retract the canopy back to the status bar
+                pullOffsetAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = 0.85f,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                )
+                isRefreshing = false
+            }
+        } else if (!isRefreshing) {
+            refreshJob = coroutineScope.launch {
+                pullOffsetAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = 0.85f,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(state.activeTabId) {
+        refreshJob?.cancel()
+        isRefreshing = false
+        pullOffsetAnim.snapTo(0f)
+    }
+
+    val currentPullOffset = pullOffsetAnim.value
+    val pullOffsetDp = with(density) { currentPullOffset.toDp() }
+    val canopyHeight = statusBarTop + pullOffsetDp
+
     ClearBrowserTheme(
         isDark = isDark,
         dynamicColor = state.settings.dynamicColor,
@@ -140,22 +251,38 @@ fun ReadingScreen(
         ) {
             // Web content starts directly below the status bar, placed safely out of the
             // phone's notch and status bar area (or full screen in HTML5 fullscreen video mode).
+            // When pulling down to refresh, the content shifts down in tandem with the canopy.
             AndroidView(
-                factory = { context -> WebContainer(context) },
+                factory = { context ->
+                    WebContainer(context).apply {
+                        pullToRefreshEnabled = state.settings.pullToRefresh && !state.isStartPage && !state.isFullscreen
+                        isAtTopProvider = { state.scrollAtTop && !isRefreshing }
+                        onPullProgress = handlePullProgress
+                        onPullRelease = handlePullRelease
+                    }
+                },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = if (state.isFullscreen) 0.dp else statusBarTop)
+                    .offset { IntOffset(0, currentPullOffset.roundToInt()) }
                     .testTag("web-content"),
-                update = { holder -> attachEngine(holder) },
+                update = { holder ->
+                    attachEngine(holder)
+                    holder.pullToRefreshEnabled = state.settings.pullToRefresh && !state.isStartPage && !state.isFullscreen
+                    holder.isAtTopProvider = { state.scrollAtTop && !isRefreshing }
+                    holder.onPullProgress = handlePullProgress
+                    holder.onPullRelease = handlePullRelease
+                },
             )
 
-            // Top status bar strip: fills the status bar area with the website's
-            // sampled top bar color (or theme surface on the start page / pending sample).
+            // Top status bar strip & expanding pull-to-refresh canopy:
+            // Fills the status bar area with the website's sampled top bar color, and expands
+            // downward during a pull gesture with the tactile contrast-matched reload indicator.
             if (!state.isFullscreen) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(statusBarTop)
+                        .height(canopyHeight)
                         .background(
                             if (!state.isStartPage && state.topBarColor != null) {
                                 Color(state.topBarColor)
@@ -164,7 +291,53 @@ fun ReadingScreen(
                             }
                         )
                         .align(Alignment.TopCenter),
-                )
+                ) {
+                    if (currentPullOffset > 4f) {
+                        val contentColor = if (!state.isStartPage && state.topBarColor != null) {
+                            if (state.isTopBarLight) Color(0xFF1E1E1E) else Color(0xFFF2F2F2)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(pullOffsetDp)
+                                .align(Alignment.BottomCenter),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .graphicsLayer {
+                                            alpha = (currentPullOffset / restingLoadingHeightPx).coerceIn(0f, 1f)
+                                        },
+                                    color = contentColor,
+                                    strokeWidth = 2.5.dp,
+                                )
+                            } else {
+                                val progress = (currentPullOffset / triggerThresholdPx).coerceIn(0f, 1f)
+                                val rotation = progress * 180f
+                                val scale = 0.6f + (progress * 0.4f)
+                                val alpha = (progress * 1.5f).coerceIn(0.2f, 1f)
+
+                                Icon(
+                                    imageVector = Icons.Rounded.Refresh,
+                                    contentDescription = stringResource(R.string.chrome_reload),
+                                    tint = contentColor.copy(alpha = alpha),
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .graphicsLayer {
+                                            rotationZ = rotation
+                                            scaleX = scale
+                                            scaleY = scale
+                                        },
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // No scrim over the top of the page any more. The engine insets its
@@ -270,6 +443,7 @@ fun ReadingScreen(
                     onClose = onCloseTab,
                     onNewTab = onNewTab,
                     onDismiss = onCloseTabs,
+                    favicons = state.favicons,
                 )
             }
 
@@ -289,6 +463,7 @@ fun ReadingScreen(
                     onTextZoomChange = onTextZoomChange,
                     onChromeThemeChange = onChromeThemeChange,
                     onHideHandleChange = onHideHandleChange,
+                    onPullToRefreshChange = onPullToRefreshChange,
                     onClearBrowsingData = onClearBrowsingData,
                     sitePermissions = sitePermissions,
                     onRevokeSitePermission = onRevokeSitePermission,

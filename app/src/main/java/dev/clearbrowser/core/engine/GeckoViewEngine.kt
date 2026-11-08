@@ -485,7 +485,7 @@ class GeckoViewEngine(
                         defaultValue = null,
                         hasInput = false,
                         withCancel = true,
-                        onAccept = { result.complete(prompt.confirm(0)) },
+                        onAccept = { result.complete(prompt.confirm(GeckoSession.PromptDelegate.ButtonPrompt.Type.POSITIVE)) },
                         onDismiss = { result.complete(prompt.dismiss()) },
                     ),
                 )

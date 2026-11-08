@@ -63,4 +63,16 @@ class BrowserSettingsTest {
         val settings = BrowserSettings(hideHandle = true)
         assertEquals(true, settings.hideHandle)
     }
+
+    @Test
+    fun defaultPullToRefreshIsTrue() {
+        val settings = BrowserSettings()
+        assertEquals(true, settings.pullToRefresh)
+    }
+
+    @Test
+    fun customPullToRefreshIsRetained() {
+        val settings = BrowserSettings(pullToRefresh = false)
+        assertEquals(false, settings.pullToRefresh)
+    }
 }

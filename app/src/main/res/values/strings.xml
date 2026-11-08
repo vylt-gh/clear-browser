@@ -58,6 +58,8 @@
     <string name="menu_auto_hide_subtitle">Fade the bar away as you scroll down</string>
     <string name="menu_hide_handle">Hide handle when reading</string>
     <string name="menu_hide_handle_subtitle">Completely hide the button while scrolling; scroll up to reveal</string>
+    <string name="menu_pull_to_refresh">Pull to refresh</string>
+    <string name="menu_pull_to_refresh_subtitle">Pull down from the top of a page to reload</string>
     <string name="menu_immersive">Full screen</string>
     <string name="menu_immersive_subtitle">Also hide the system bars</string>
     <string name="menu_incognito">Private browsing</string>

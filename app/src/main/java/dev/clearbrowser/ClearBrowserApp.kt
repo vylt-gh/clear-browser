@@ -2,6 +2,7 @@ package dev.clearbrowser
 
 import android.app.Application
 import dev.clearbrowser.core.data.BookmarkStore
+import dev.clearbrowser.core.data.FaviconStore
 import dev.clearbrowser.core.data.HistoryStore
 import dev.clearbrowser.core.data.SettingsStore
 
@@ -19,4 +20,5 @@ class ClearBrowserApp : Application() {
      */
     val history: HistoryStore by lazy { HistoryStore.forContext(this) }
     val bookmarks: BookmarkStore by lazy { BookmarkStore.forContext(this) }
+    val faviconStore: FaviconStore by lazy { FaviconStore(this) }
 }

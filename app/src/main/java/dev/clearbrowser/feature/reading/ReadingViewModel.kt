@@ -4,6 +4,7 @@ package dev.clearbrowser.feature.reading
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.ViewGroup
 import androidx.lifecycle.ViewModel
@@ -11,10 +12,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.clearbrowser.core.data.BookmarkStore
 import dev.clearbrowser.core.data.BrowserSettings
+import dev.clearbrowser.core.data.FaviconStore
 import dev.clearbrowser.core.data.HistoryStore
 import dev.clearbrowser.core.data.SavedTab
 import dev.clearbrowser.core.data.SessionStore
 import dev.clearbrowser.core.data.SettingsStore
+import dev.clearbrowser.core.data.extractFaviconHost
 import dev.clearbrowser.core.data.resolveAddress
 import dev.clearbrowser.core.engine.BrowserProfile
 import dev.clearbrowser.core.engine.ClearGeckoRuntime
@@ -95,6 +98,8 @@ data class ReadingUiState(
     val contextMenu: dev.clearbrowser.core.engine.ContextMenuInfo? = null,
     /** Active extension popup view session displayed in a sheet. */
     val extensionPopup: ExtensionPopupState? = null,
+    /** Cached favicons for open tabs. */
+    val favicons: Map<String, Bitmap> = emptyMap(),
 ) {
     /** What the address field shows when it is not focused. */
     val displayHost: String
@@ -177,6 +182,7 @@ class ReadingViewModel(
     private val downloadsStore: dev.clearbrowser.core.data.DownloadsStore? = null,
     private val sitePermissionStore: dev.clearbrowser.core.data.SitePermissionStore? = null,
     private val suggestionsFetcher: dev.clearbrowser.core.data.SearchSuggestionsFetcher = dev.clearbrowser.core.data.DefaultSearchSuggestionsFetcher,
+    private val faviconStore: FaviconStore? = null,
 ) : ViewModel() {
 
     private var suggestionsJob: kotlinx.coroutines.Job? = null
@@ -511,6 +517,7 @@ class ReadingViewModel(
             settingsVisible = false,
             extensionsVisible = false,
         )
+        loadFaviconsForTabs(_state.value.tabs)
     }
 
     fun closeTabs() {
@@ -1474,7 +1481,9 @@ class ReadingViewModel(
         // that was in flight across a navigation could be credited to the page
         // the user just landed on.
         scrollIntent.reset()
-        _state.value = _state.value.copy(topBarColor = null)
+        if (url.isBlank() || url == ABOUT_BLANK) {
+            _state.value = _state.value.copy(topBarColor = null)
+        }
     }
 
     private fun hideForReading() {
@@ -1512,6 +1521,7 @@ class ReadingViewModel(
     private fun pushActiveTab() {
         val tab = strip.active ?: return
         val engine = engines[tab.id]
+        val isBlank = tab.url.isBlank() || tab.url == ABOUT_BLANK
         _state.value = _state.value.copy(
             url = tab.url,
             title = tab.title,
@@ -1523,7 +1533,7 @@ class ReadingViewModel(
             jsDialog = null,
             tabs = strip.summaries(),
             activeTabId = tab.id,
-            topBarColor = null,
+            topBarColor = if (isBlank) null else _state.value.topBarColor,
             isFullscreen = false,
             findInPageVisible = false,
         )
@@ -1531,7 +1541,32 @@ class ReadingViewModel(
     }
 
     private fun publishTabs() {
-        _state.value = _state.value.copy(tabs = strip.summaries(), activeTabId = strip.activeId)
+        val summaries = strip.summaries()
+        val openHosts = summaries.mapNotNull { extractFaviconHost(it.url) }.toSet()
+        val retainedFavicons = _state.value.favicons.filterKeys { it in openHosts }
+        _state.value = _state.value.copy(
+            tabs = summaries,
+            activeTabId = strip.activeId,
+            favicons = retainedFavicons,
+        )
+        loadFaviconsForTabs(summaries)
+    }
+
+    private fun loadFaviconsForTabs(tabs: List<Tab>) {
+        val store = faviconStore ?: return
+        viewModelScope.launch {
+            val isPrivate = _state.value.incognito
+            for (tab in tabs) {
+                val host = extractFaviconHost(tab.url) ?: continue
+                if (_state.value.favicons.containsKey(host)) continue
+                val bmp = store.loadFavicon(tab.url, isPrivate = isPrivate)
+                if (bmp != null) {
+                    _state.value = _state.value.copy(
+                        favicons = _state.value.favicons + (host to bmp),
+                    )
+                }
+            }
+        }
     }
 
     /** Called after restoring, when the state has to include the tab list. */
@@ -1697,6 +1732,7 @@ class ReadingViewModel(
         private val bookmarkStore: BookmarkStore,
         private val downloadsStore: dev.clearbrowser.core.data.DownloadsStore? = null,
         private val sitePermissionStore: dev.clearbrowser.core.data.SitePermissionStore? = null,
+        private val faviconStore: FaviconStore? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -1709,6 +1745,7 @@ class ReadingViewModel(
                 bookmarkStore,
                 downloadsStore,
                 sitePermissionStore = sitePermissionStore,
+                faviconStore = faviconStore,
             ) as T
     }
 

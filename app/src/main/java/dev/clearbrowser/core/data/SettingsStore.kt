@@ -93,6 +93,9 @@ data class BrowserSettings(
 
     /** Whether to completely hide the collapsed handle when reading. */
     val hideHandle: Boolean = false,
+
+    /** Pull down from the top of the page to refresh. */
+    val pullToRefresh: Boolean = true,
 ) {
 }
 
@@ -131,6 +134,8 @@ class SettingsStore(context: Context) {
 
     fun setHideHandle(enabled: Boolean) = update { it.copy(hideHandle = enabled) }
 
+    fun setPullToRefresh(enabled: Boolean) = update { it.copy(pullToRefresh = enabled) }
+
     fun setOriginalMaterial3Chrome(enabled: Boolean) =
         setChromeTheme(if (enabled) ChromeTheme.MATERIAL else ChromeTheme.CLEAR)
 
@@ -148,6 +153,7 @@ class SettingsStore(context: Context) {
             .putInt(KEY_TEXT_ZOOM, next.textZoom)
             .putString(KEY_CHROME_THEME, next.chromeTheme.name)
             .putBoolean(KEY_HIDE_HANDLE, next.hideHandle)
+            .putBoolean(KEY_PULL_TO_REFRESH, next.pullToRefresh)
             .apply()
     }
 
@@ -172,6 +178,7 @@ class SettingsStore(context: Context) {
             ?.let { runCatching { ChromeTheme.valueOf(it) }.getOrNull() }
             ?: if (prefs.getBoolean(KEY_ORIGINAL_M3_CHROME, false)) ChromeTheme.ACRYLIC else ChromeTheme.CLEAR,
         hideHandle = prefs.getBoolean(KEY_HIDE_HANDLE, false),
+        pullToRefresh = prefs.getBoolean(KEY_PULL_TO_REFRESH, true),
     )
 
     private companion object {
@@ -185,6 +192,7 @@ class SettingsStore(context: Context) {
         const val KEY_TEXT_ZOOM = "text_zoom"
         const val KEY_CHROME_THEME = "chrome_theme"
         const val KEY_HIDE_HANDLE = "hide_handle"
+        const val KEY_PULL_TO_REFRESH = "pull_to_refresh"
         const val KEY_ORIGINAL_M3_CHROME = "original_material3_chrome"
     }
 }

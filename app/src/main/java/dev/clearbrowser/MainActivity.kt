@@ -46,6 +46,9 @@ class MainActivity : ComponentActivity() {
     private val bookmarks: BookmarkStore
         get() = app.bookmarks
 
+    private val faviconStore: dev.clearbrowser.core.data.FaviconStore
+        get() = app.faviconStore
+
     private val downloads: dev.clearbrowser.core.data.DownloadsStore by lazy {
         dev.clearbrowser.core.data.DownloadsStore(applicationContext)
     }
@@ -341,7 +344,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Browser() {
         val viewModel: ReadingViewModel = viewModel(
-            factory = ReadingViewModel.Factory(settings, sessionStore, history, bookmarks, downloads, sitePermissions),
+            factory = ReadingViewModel.Factory(settings, sessionStore, history, bookmarks, downloads, sitePermissions, faviconStore),
         )
         // Assigned for onNewIntent and the lifecycle callbacks, which all
         // arrive outside composition.
@@ -557,6 +560,7 @@ class MainActivity : ComponentActivity() {
             onSearchEngineChange = settings::setSearchEngine,
             onAutoHideChange = settings::setAutoHideChrome,
             onHideHandleChange = settings::setHideHandle,
+            onPullToRefreshChange = settings::setPullToRefresh,
             onDynamicColorChange = settings::setDynamicColor,
             onImmersiveChange = { viewModel.setImmersive(it) },
             onIncognitoChange = viewModel::setIncognito,

@@ -48,6 +48,34 @@ class WebContainer(context: Context) : FrameLayout(context) {
 
     var onUserTouchChanged: ((Boolean) -> Unit)? = null
 
+    /** Whether pull-to-refresh is enabled by settings and current page context. */
+    var pullToRefreshEnabled: Boolean = true
+
+    /** Provider reporting whether the document is currently scrolled at top. */
+    var isAtTopProvider: (() -> Boolean)? = null
+
+    /** Callback reporting active pull offset in pixels and the release threshold. */
+    var onPullProgress: ((offsetPx: Float, thresholdPx: Float) -> Unit)? = null
+
+    /**
+     * Callback when a pull gesture is released.
+     * [triggered] is true if pulled past the activation threshold.
+     */
+    var onPullRelease: ((triggered: Boolean) -> Unit)? = null
+
+    private val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+    private val triggerThresholdPx: Float
+        get() = 72f * resources.displayMetrics.density
+    private val maxPullPx: Float
+        get() = 130f * resources.displayMetrics.density
+
+    private var activePointerId = MotionEvent.INVALID_POINTER_ID
+    private var downX = 0f
+    private var downY = 0f
+    private var isPullCandidate = false
+    private var isPulling = false
+    private var currentDampedOffset = 0f
+
     /**
      * Chrome bounds in *window* coordinates. The page is denied touches inside
      * these rects.
@@ -104,7 +132,86 @@ class WebContainer(context: Context) : FrameLayout(context) {
             // Decline, so the parent Compose view hit-tests it instead. The
             // page underneath deliberately does not see these touches either:
             // a tap on the toolbar should not also press the content behind it.
+            if (isPulling) {
+                isPulling = false
+                isPullCandidate = false
+                currentDampedOffset = 0f
+                onPullRelease?.invoke(false)
+            }
             return false
+        }
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                activePointerId = event.getPointerId(0)
+                downX = event.x
+                downY = event.y
+                isPulling = false
+                currentDampedOffset = 0f
+                isPullCandidate = pullToRefreshEnabled && (isAtTopProvider?.invoke() != false)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val pointerIndex = event.findPointerIndex(activePointerId)
+                if (pointerIndex >= 0) {
+                    val y = event.getY(pointerIndex)
+                    val x = event.getX(pointerIndex)
+                    val dy = y - downY
+                    val dx = x - downX
+
+                    if (isPullCandidate && !isPulling) {
+                        if (dy > touchSlop && dy > 1.5f * kotlin.math.abs(dx)) {
+                            // User is intentionally dragging downward from top of page
+                            isPulling = true
+                            // Cancel child GeckoView pan/touch to prevent in-page gestures
+                            val cancelEvent = MotionEvent.obtain(event).apply {
+                                action = MotionEvent.ACTION_CANCEL
+                            }
+                            super.dispatchTouchEvent(cancelEvent)
+                            cancelEvent.recycle()
+                        } else if (dy < -touchSlop || kotlin.math.abs(dx) > touchSlop) {
+                            // Moved up or sideways: disqualify from pull-to-refresh
+                            isPullCandidate = false
+                        }
+                    }
+
+                    if (isPulling) {
+                        val rawPull = (dy - touchSlop).coerceAtLeast(0f)
+                        currentDampedOffset = calculateDampedOffset(rawPull, maxPullPx)
+                        onPullProgress?.invoke(currentDampedOffset, triggerThresholdPx)
+                        val wasTouching = isUserTouching
+                        isUserTouching = true
+                        if (wasTouching != isUserTouching) onUserTouchChanged?.invoke(isUserTouching)
+                        return true
+                    }
+                }
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                val pointerIndex = event.actionIndex
+                if (event.getPointerId(pointerIndex) == activePointerId) {
+                    val newIndex = if (pointerIndex == 0) 1 else 0
+                    if (newIndex < event.pointerCount) {
+                        activePointerId = event.getPointerId(newIndex)
+                        downX = event.getX(newIndex)
+                        downY = event.getY(newIndex)
+                    }
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                activePointerId = MotionEvent.INVALID_POINTER_ID
+                if (isPulling) {
+                    isPulling = false
+                    isPullCandidate = false
+                    val triggered = currentDampedOffset >= triggerThresholdPx
+                    onPullRelease?.invoke(triggered)
+                    currentDampedOffset = 0f
+                    val wasTouching = isUserTouching
+                    isUserTouching = false
+                    if (wasTouching != isUserTouching) onUserTouchChanged?.invoke(isUserTouching)
+                    return true
+                }
+                isPullCandidate = false
+                currentDampedOffset = 0f
+            }
         }
 
         val wasTouching = isUserTouching
@@ -125,8 +232,15 @@ class WebContainer(context: Context) : FrameLayout(context) {
         return reservations.contains(x, y)
     }
 
-    private companion object {
+    internal companion object {
         const val OWNER_CHROME = "chrome"
+
+        internal fun calculateDampedOffset(rawPull: Float, maxPx: Float): Float {
+            if (rawPull <= 0f || maxPx <= 0f) return 0f
+            val factor = 1.2f
+            val progress = (rawPull * factor) / maxPx
+            return maxPx * (1f - 1f / (progress + 1f))
+        }
     }
 
     override fun onAttachedToWindow() {
