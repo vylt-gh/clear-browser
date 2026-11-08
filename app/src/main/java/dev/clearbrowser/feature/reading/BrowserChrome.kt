@@ -77,6 +77,7 @@ import androidx.compose.ui.window.PopupProperties
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.BrowserSettings
 import dev.clearbrowser.core.data.ChromePosition
+import dev.clearbrowser.core.data.ChromeTheme
 import dev.clearbrowser.core.data.SearchSuggestion
 import dev.clearbrowser.core.theme.chromeFadeSpec
 import dev.clearbrowser.core.theme.chromeMorphSpring
@@ -196,11 +197,11 @@ fun ChromeSurface(
         val currentOffset = lerpDp(handleOffset, 0.dp, progress)
 
         val isDark = isSystemInDarkTheme()
-        val isOriginalM3 = state.settings.originalMaterial3Chrome
+        val chromeTheme = state.settings.chromeTheme
         val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
 
         val colorScheme = MaterialTheme.colorScheme
-        val m3Background = remember(colorScheme) {
+        val acrylicBackground = remember(colorScheme) {
             Brush.verticalGradient(
                 listOf(
                     colorScheme.surfaceContainer.copy(alpha = 0.88f),
@@ -208,7 +209,7 @@ fun ChromeSurface(
                 )
             )
         }
-        val m3Border = remember(colorScheme) {
+        val acrylicBorder = remember(colorScheme) {
             Brush.verticalGradient(
                 listOf(
                     colorScheme.outline.copy(alpha = 0.35f),
@@ -236,39 +237,54 @@ fun ChromeSurface(
                         omniboxText = TextFieldValue(text, TextRange(text.length))
                         onQueryChange(text)
                     },
-                    isOriginalM3 = isOriginalM3,
+                    chromeTheme = chromeTheme,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
                 )
             }
 
-            val chromeBarModifier = if (isOriginalM3) {
-                Modifier
-                    .width(currentWidth)
-                    .height(HANDLE_SIZE)
-                    .graphicsLayer { translationX = currentOffset.toPx() }
-                    .shadow(
-                        elevation = if (progress > 0.5f) 8.dp else 2.dp,
-                        shape = CircleShape,
-                    )
-                    .clip(CircleShape)
-                    .background(m3Background)
-                    .border(BorderStroke(1.dp, m3Border), CircleShape)
-            } else {
-                Modifier
-                    .width(currentWidth)
-                    .height(HANDLE_SIZE)
-                    .graphicsLayer { translationX = currentOffset.toPx() }
-                    .shadow(
-                        elevation = if (progress > 0.5f) 14.dp else 4.dp,
-                        shape = CircleShape,
-                        spotColor = if (isDark) Color.Black.copy(alpha = 0.55f) else Color(0x30000000),
-                        ambientColor = if (isDark) Color.Black.copy(alpha = 0.35f) else Color(0x15000000),
-                    )
-                    .clip(CircleShape)
-                    .background(frostedBackground)
-                    .border(BorderStroke(1.dp, frostedBorder), CircleShape)
+            val chromeBarModifier = when (chromeTheme) {
+                ChromeTheme.CLEAR -> {
+                    Modifier
+                        .width(currentWidth)
+                        .height(HANDLE_SIZE)
+                        .graphicsLayer { translationX = currentOffset.toPx() }
+                        .shadow(
+                            elevation = if (progress > 0.5f) 14.dp else 4.dp,
+                            shape = CircleShape,
+                            spotColor = if (isDark) Color.Black.copy(alpha = 0.55f) else Color(0x30000000),
+                            ambientColor = if (isDark) Color.Black.copy(alpha = 0.35f) else Color(0x15000000),
+                        )
+                        .clip(CircleShape)
+                        .background(frostedBackground)
+                        .border(BorderStroke(1.dp, frostedBorder), CircleShape)
+                }
+                ChromeTheme.ACRYLIC -> {
+                    Modifier
+                        .width(currentWidth)
+                        .height(HANDLE_SIZE)
+                        .graphicsLayer { translationX = currentOffset.toPx() }
+                        .shadow(
+                            elevation = if (progress > 0.5f) 8.dp else 2.dp,
+                            shape = CircleShape,
+                        )
+                        .clip(CircleShape)
+                        .background(acrylicBackground)
+                        .border(BorderStroke(1.dp, acrylicBorder), CircleShape)
+                }
+                ChromeTheme.MATERIAL -> {
+                    Modifier
+                        .width(currentWidth)
+                        .height(HANDLE_SIZE)
+                        .graphicsLayer { translationX = currentOffset.toPx() }
+                        .shadow(
+                            elevation = if (progress > 0.5f) 3.dp else 1.dp,
+                            shape = CircleShape,
+                        )
+                        .clip(CircleShape)
+                        .background(colorScheme.surfaceContainer)
+                }
             }
 
             Row(
@@ -396,35 +412,40 @@ private fun CompactBar(
             }
 
             val isDark = isSystemInDarkTheme()
-            val isOriginalM3 = state.settings.originalMaterial3Chrome
-            val addressPillBackground = if (isOriginalM3) {
-                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
-            } else {
-                if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+            val chromeTheme = state.settings.chromeTheme
+            val addressPillBackground = when (chromeTheme) {
+                ChromeTheme.CLEAR -> if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+                ChromeTheme.ACRYLIC -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+                ChromeTheme.MATERIAL -> MaterialTheme.colorScheme.surfaceContainerHigh
             }
-            val addressPillBorder = if (isOriginalM3) {
-                BorderStroke(
-                    0.75.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                )
-            } else {
-                BorderStroke(
+            val addressPillBorder = when (chromeTheme) {
+                ChromeTheme.CLEAR -> BorderStroke(
                     0.75.dp,
                     if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f),
                 )
+                ChromeTheme.ACRYLIC -> BorderStroke(
+                    0.75.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                )
+                ChromeTheme.MATERIAL -> null
             }
+            var pillModifier = Modifier
+                .weight(1f)
+                .clip(CircleShape)
+                .background(addressPillBackground)
+            if (addressPillBorder != null) {
+                pillModifier = pillModifier.border(addressPillBorder, CircleShape)
+            }
+            pillModifier = pillModifier
+                .height(44.dp)
+                // Tapping the address is the primary way into the
+                // browser's own UI, so it has to be the most
+                // tappable thing in the pill.
+                .clickable(onClick = onExpandOmnibox)
+                .padding(horizontal = 14.dp)
+
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(CircleShape)
-                    .background(addressPillBackground)
-                    .border(addressPillBorder, CircleShape)
-                    .height(44.dp)
-                    // Tapping the address is the primary way into the
-                    // browser's own UI, so it has to be the most
-                    // tappable thing in the pill.
-                    .clickable(onClick = onExpandOmnibox)
-                    .padding(horizontal = 14.dp),
+                modifier = pillModifier,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (state.incognito) {
@@ -503,7 +524,7 @@ private fun CompactBar(
                             onShare = onSharePage,
                             onCopyLink = onCopyLink,
                             onSettings = onSettings,
-                            isOriginalM3 = isOriginalM3,
+                            chromeTheme = chromeTheme,
                         )
                     }
                 }
@@ -654,7 +675,7 @@ private fun SuggestionsCard(
     suggestions: List<SearchSuggestion>,
     onSelect: (SearchSuggestion) -> Unit,
     onInsert: (String) -> Unit,
-    isOriginalM3: Boolean = false,
+    chromeTheme: ChromeTheme = ChromeTheme.CLEAR,
     modifier: Modifier = Modifier,
 ) {
     val isDark = isSystemInDarkTheme()
@@ -662,31 +683,41 @@ private fun SuggestionsCard(
     val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
     val colorScheme = MaterialTheme.colorScheme
 
-    val cardModifier = if (isOriginalM3) {
-        val m3Border = remember(colorScheme) {
-            Brush.verticalGradient(
-                listOf(
-                    colorScheme.outline.copy(alpha = 0.35f),
-                    colorScheme.outlineVariant.copy(alpha = 0.15f),
+    val cardModifier = when (chromeTheme) {
+        ChromeTheme.CLEAR -> {
+            modifier
+                .shadow(
+                    elevation = 16.dp,
+                    shape = shape,
+                    spotColor = if (isDark) Color.Black.copy(alpha = 0.65f) else Color(0x35000000),
+                    ambientColor = if (isDark) Color.Black.copy(alpha = 0.40f) else Color(0x18000000),
                 )
-            )
+                .clip(shape)
+                .background(frostedBackground)
+                .border(BorderStroke(1.dp, frostedBorder), shape)
         }
-        modifier
-            .shadow(elevation = 8.dp, shape = shape)
-            .clip(shape)
-            .background(colorScheme.surfaceContainerHigh.copy(alpha = 0.90f))
-            .border(BorderStroke(1.dp, m3Border), shape)
-    } else {
-        modifier
-            .shadow(
-                elevation = 16.dp,
-                shape = shape,
-                spotColor = if (isDark) Color.Black.copy(alpha = 0.65f) else Color(0x35000000),
-                ambientColor = if (isDark) Color.Black.copy(alpha = 0.40f) else Color(0x18000000),
-            )
-            .clip(shape)
-            .background(frostedBackground)
-            .border(BorderStroke(1.dp, frostedBorder), shape)
+        ChromeTheme.ACRYLIC -> {
+            val acrylicBorder = remember(colorScheme) {
+                Brush.verticalGradient(
+                    listOf(
+                        colorScheme.outline.copy(alpha = 0.35f),
+                        colorScheme.outlineVariant.copy(alpha = 0.15f),
+                    )
+                )
+            }
+            modifier
+                .shadow(elevation = 8.dp, shape = shape)
+                .clip(shape)
+                .background(colorScheme.surfaceContainerHigh.copy(alpha = 0.90f))
+                .border(BorderStroke(1.dp, acrylicBorder), shape)
+        }
+        ChromeTheme.MATERIAL -> {
+            modifier
+                .shadow(elevation = 6.dp, shape = shape)
+                .clip(shape)
+                .background(colorScheme.surfaceContainerHigh)
+                .border(BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.4f)), shape)
+        }
     }
 
     Box(modifier = cardModifier) {
@@ -698,10 +729,10 @@ private fun SuggestionsCard(
             itemsIndexed(suggestions) { index, suggestion ->
                 if (index > 0) {
                     HorizontalDivider(
-                        color = if (isOriginalM3) {
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                        } else {
+                        color = if (chromeTheme == ChromeTheme.CLEAR) {
                             if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f)
+                        } else {
+                            colorScheme.outlineVariant.copy(alpha = 0.25f)
                         },
                         thickness = 0.5.dp,
                         modifier = Modifier.padding(horizontal = 16.dp),

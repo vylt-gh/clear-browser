@@ -212,9 +212,18 @@ class MainActivity : ComponentActivity() {
                 val clearCache = intent.getBooleanExtra("cache", true)
                 viewModel.clearBrowsingData(clearHistory, clearCookies, clearCache)
             }
+            command == "chrome_theme" || command == "theme_style" || action == "dev.clearbrowser.ACTION_CHROME_THEME" -> {
+                val themeStr = intent.getStringExtra("theme")?.uppercase()
+                val theme = when (themeStr) {
+                    "ACRYLIC" -> dev.clearbrowser.core.data.ChromeTheme.ACRYLIC
+                    "MATERIAL", "M3" -> dev.clearbrowser.core.data.ChromeTheme.MATERIAL
+                    else -> dev.clearbrowser.core.data.ChromeTheme.CLEAR
+                }
+                settings.setChromeTheme(theme)
+            }
             command == "m3_chrome" || command == "original_m3" || action == "dev.clearbrowser.ACTION_M3_CHROME" -> {
                 val enabled = intent.getBooleanExtra("enabled", true)
-                settings.setOriginalMaterial3Chrome(enabled)
+                settings.setChromeTheme(if (enabled) dev.clearbrowser.core.data.ChromeTheme.MATERIAL else dev.clearbrowser.core.data.ChromeTheme.CLEAR)
             }
             intent.dataString != null -> {
                 viewModel.navigate(intent.dataString!!)
@@ -359,7 +368,7 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this@MainActivity, R.string.toast_browsing_data_cleared, Toast.LENGTH_SHORT).show()
             },
             onTextZoomChange = viewModel::setTextZoom,
-            onOriginalMaterial3ChromeChange = settings::setOriginalMaterial3Chrome,
+            onChromeThemeChange = settings::setChromeTheme,
             onSharePage = {
                 val s = viewModel.state.value
                 sharePage(s.url, s.title)

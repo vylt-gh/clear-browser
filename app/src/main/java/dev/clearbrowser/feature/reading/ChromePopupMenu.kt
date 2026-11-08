@@ -1,5 +1,6 @@
 package dev.clearbrowser.feature.reading
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupPositionProvider
 import dev.clearbrowser.R
+import dev.clearbrowser.core.data.ChromeTheme
 
 /**
  * Speech-bubble shape with a triangular arrow/tail on the bottom edge pointing down.
@@ -141,40 +143,58 @@ fun ChromePopupMenu(
     onShare: () -> Unit = {},
     onCopyLink: () -> Unit = {},
     onSettings: () -> Unit,
-    isOriginalM3: Boolean = false,
+    chromeTheme: ChromeTheme = ChromeTheme.CLEAR,
     modifier: Modifier = Modifier,
 ) {
     if (!visible) return
 
-    val shape = if (isOriginalM3) {
-        RoundedCornerShape(16.dp)
-    } else {
-        BubbleShape(
+    val shape = when (chromeTheme) {
+        ChromeTheme.CLEAR -> BubbleShape(
             cornerRadius = 16.dp,
             arrowWidth = 16.dp,
             arrowHeight = 10.dp,
             arrowOffsetFromRight = 16.dp,
         )
+        ChromeTheme.ACRYLIC, ChromeTheme.MATERIAL -> RoundedCornerShape(16.dp)
+    }
+
+    val elevation = when (chromeTheme) {
+        ChromeTheme.CLEAR -> 16.dp
+        ChromeTheme.ACRYLIC -> 8.dp
+        ChromeTheme.MATERIAL -> 6.dp
+    }
+
+    val spotColor = when (chromeTheme) {
+        ChromeTheme.CLEAR -> Color.Black.copy(alpha = 0.45f)
+        ChromeTheme.ACRYLIC -> Color.Black.copy(alpha = 0.25f)
+        ChromeTheme.MATERIAL -> Color.Black.copy(alpha = 0.20f)
+    }
+
+    val borderStroke = when (chromeTheme) {
+        ChromeTheme.CLEAR, ChromeTheme.ACRYLIC ->
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+        ChromeTheme.MATERIAL ->
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
     }
 
     Surface(
         modifier = modifier
             .width(215.dp)
             .shadow(
-                elevation = if (isOriginalM3) 8.dp else 16.dp,
+                elevation = elevation,
                 shape = shape,
-                spotColor = Color.Black.copy(alpha = if (isOriginalM3) 0.25f else 0.45f),
+                spotColor = spotColor,
             )
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), shape = shape),
+            .border(borderStroke, shape),
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 8.dp,
+        tonalElevation = if (chromeTheme == ChromeTheme.MATERIAL) 3.dp else 8.dp,
     ) {
         Column(
             modifier = Modifier
                 .padding(
                     top = 8.dp,
-                    bottom = if (isOriginalM3) 8.dp else 18.dp,
+                    bottom = if (chromeTheme == ChromeTheme.CLEAR) 18.dp else 8.dp,
                     start = 6.dp,
                     end = 6.dp,
                 ),

@@ -31,14 +31,24 @@ class BrowserSettingsTest {
     }
 
     @Test
-    fun defaultOriginalMaterial3ChromeIsFalse() {
+    fun defaultChromeThemeIsClear() {
         val settings = BrowserSettings()
-        assertEquals(false, settings.originalMaterial3Chrome)
+        assertEquals(ChromeTheme.CLEAR, settings.chromeTheme)
     }
 
     @Test
-    fun customOriginalMaterial3ChromeIsRetained() {
-        val settings = BrowserSettings(originalMaterial3Chrome = true)
-        assertEquals(true, settings.originalMaterial3Chrome)
+    fun customChromeThemeIsRetained() {
+        val acrylic = BrowserSettings(chromeTheme = ChromeTheme.ACRYLIC)
+        assertEquals(ChromeTheme.ACRYLIC, acrylic.chromeTheme)
+
+        val material = BrowserSettings(chromeTheme = ChromeTheme.MATERIAL)
+        assertEquals(ChromeTheme.MATERIAL, material.chromeTheme)
+    }
+
+    @Test
+    fun chromeThemeEntriesAreAllDistinct() {
+        val themes = ChromeTheme.entries.toSet()
+        assertEquals(3, themes.size)
+        assertEquals(setOf(ChromeTheme.CLEAR, ChromeTheme.ACRYLIC, ChromeTheme.MATERIAL), themes)
     }
 }

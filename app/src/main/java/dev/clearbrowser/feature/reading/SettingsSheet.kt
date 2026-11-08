@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.ChromePosition
+import dev.clearbrowser.core.data.ChromeTheme
 import dev.clearbrowser.core.data.SearchEngine
 import dev.clearbrowser.core.data.WebTheme
 
@@ -78,7 +79,7 @@ fun SettingsSheet(
     onIncognitoChange: (Boolean) -> Unit,
     onWebThemeChange: (WebTheme) -> Unit,
     onTextZoomChange: (Int) -> Unit = {},
-    onOriginalMaterial3ChromeChange: (Boolean) -> Unit = {},
+    onChromeThemeChange: (ChromeTheme) -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -138,6 +139,13 @@ fun SettingsSheet(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
+            ChromeThemeControl(
+                selected = settings.chromeTheme,
+                onSelect = onChromeThemeChange,
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
             WebThemeControl(
                 selected = settings.webTheme,
                 onSelect = onWebThemeChange,
@@ -181,12 +189,6 @@ fun SettingsSheet(
                 subtitle = stringResource(R.string.menu_dynamic_color_subtitle),
                 checked = settings.dynamicColor,
                 onCheckedChange = onDynamicColorChange,
-            )
-            SwitchRow(
-                title = stringResource(R.string.menu_original_m3),
-                subtitle = stringResource(R.string.menu_original_m3_subtitle),
-                checked = settings.originalMaterial3Chrome,
-                onCheckedChange = onOriginalMaterial3ChromeChange,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -422,6 +424,52 @@ private val positionIconCenter: ImageVector = Icons.Rounded.AlignHorizontalCente
 
 private val positionIconRight: ImageVector =
     Icons.AutoMirrored.Rounded.AlignHorizontalRight
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChromeThemeControl(
+    selected: ChromeTheme,
+    onSelect: (ChromeTheme) -> Unit,
+) {
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Text(
+            text = stringResource(R.string.menu_chrome_theme),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.menu_chrome_theme_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+        ) {
+            ChromeTheme.entries.forEachIndexed { index, theme ->
+                SegmentedButton(
+                    selected = selected == theme,
+                    onClick = { onSelect(theme) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = ChromeTheme.entries.size,
+                    ),
+                    icon = {},
+                    label = {
+                        Text(
+                            text = when (theme) {
+                                ChromeTheme.CLEAR -> stringResource(R.string.chrome_theme_clear)
+                                ChromeTheme.ACRYLIC -> stringResource(R.string.chrome_theme_acrylic)
+                                ChromeTheme.MATERIAL -> stringResource(R.string.chrome_theme_material)
+                            },
+                        )
+                    },
+                )
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
