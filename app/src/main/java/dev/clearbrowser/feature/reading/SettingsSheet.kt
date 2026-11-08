@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
@@ -82,11 +83,15 @@ fun SettingsSheet(
     onChromeThemeChange: (ChromeTheme) -> Unit = {},
     onHideHandleChange: (Boolean) -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit,
+    sitePermissions: List<dev.clearbrowser.core.data.SitePermission> = emptyList(),
+    onRevokeSitePermission: (String, String) -> Unit = { _, _ -> },
+    onClearAllSitePermissions: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val settings = state.settings
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showSitePermissions by remember { mutableStateOf(false) }
     var clearHistory by remember { mutableStateOf(true) }
     var clearCookies by remember { mutableStateOf(true) }
     var clearCache by remember { mutableStateOf(true) }
@@ -200,10 +205,107 @@ fun SettingsSheet(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
+            SitePermissionsRow(
+                permissionsCount = sitePermissions.size,
+                onClick = { showSitePermissions = true },
+            )
+
             ClearDataRow(
                 onClick = { showClearConfirm = true },
             )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            AboutSection(
+                appVersion = "0.8.0",
+                engineVersion = dev.clearbrowser.core.engine.ClearGeckoRuntime.geckoViewVersion,
+            )
         }
+    }
+
+    if (showSitePermissions) {
+        AlertDialog(
+            onDismissRequest = { showSitePermissions = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Rounded.Shield,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            },
+            title = {
+                Text(text = stringResource(R.string.settings_site_permissions))
+            },
+            text = {
+                if (sitePermissions.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.settings_site_permissions_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        sitePermissions.forEach { perm ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = perm.origin,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        text = perm.permissionType,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                TextButton(
+                                    onClick = {
+                                        onRevokeSitePermission(perm.origin, perm.permissionType)
+                                    },
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.settings_site_permissions_revoke),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (sitePermissions.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            onClearAllSitePermissions()
+                            showSitePermissions = false
+                        },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_site_permissions_revoke_all),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSitePermissions = false }) {
+                    Text(text = stringResource(R.string.library_cancel))
+                }
+            },
+        )
     }
 
     if (showClearConfirm) {
@@ -603,6 +705,79 @@ private fun ClearDataRow(onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun SitePermissionsRow(
+    permissionsCount: Int,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Shield,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_site_permissions),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = if (permissionsCount > 0) {
+                    "$permissionsCount saved site permission" + if (permissionsCount > 1) "s" else ""
+                } else {
+                    stringResource(R.string.settings_site_permissions_subtitle)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AboutSection(
+    appVersion: String,
+    engineVersion: String,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_about_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "Clear Browser v$appVersion",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.settings_engine_version, engineVersion),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "Engine updates track Mozilla GeckoView release milestones.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        )
     }
 }
 

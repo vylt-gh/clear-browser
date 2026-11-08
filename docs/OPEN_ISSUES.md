@@ -354,6 +354,25 @@ The shape of the implementation is the part worth recording:
   `onSaveInstanceState` bundle carries both the strip and each tab's `WebView`
   state, because a rotation must not quietly merge two tabs into one.
 
+### Engine Switch to Mozilla GeckoView
+In v0.2.0, the rendering engine transitioned from Android system WebView to Mozilla GeckoView with hardware WebRender compositing and built-in tracking protection. Bundled with uBlock Origin MV2 (`uBlock0@raymondhill.net`), Clear Browser eliminates ads, trackers, and malicious scripts before network calls resolve.
+
+### Find in Page
+Landed in v0.4.0: in-page search bar with forward/backward navigation, real-time match counter (`X of Y`), IME auto-focus, and auto-scrolling to active matches directly within GeckoView.
+
+### Share Page & Copy Link
+Landed in v0.6.0: Quick sharing via standard Android `ACTION_SEND` chooser and one-tap link copying directly inside the anchored popup menu.
+
+### Chrome Visual Themes & Handle Controls
+Landed in v0.7.0: A 3-way visual chrome style selector (`Clear` frosted glass, `Acrylic` translucent container, and classic `Material` from v0.1), alongside full dock coordinate fixes and a dedicated reading mode toggle to completely hide the collapsed handle.
+
+### WebExtension Popups, AMO Store & Downloads
+Landed in v0.8.0:
+- WebExtension popups (uBlock Origin, Dark Reader, etc.) render dynamically in contextual bottom sheets attached to the active session.
+- In-browser installation of extensions directly from `addons.mozilla.org` (AMO).
+- Dedicated Downloads manager tab in the Library sheet tracking downloads in real-time.
+- Hierarchical back navigation: walks backwards through history, returns to `about:blank`, and exits only when backing out from the start page.
+
 ### Verified on device
 - Tabs: new tab, switch, close active / background / last, detach-and-reattach
   keeps the page, `last.json` writes `tabs[]` with the right `active` index, and
@@ -373,7 +392,5 @@ Nothing outstanding. Everything previously listed here has landed.
 
 ## Deliberately deferred
 
-- **Passkeys / WebAuthn.** Confirmed low priority by the user. Worth revisiting
-  when account *creation* starts mattering, since signup flows increasingly offer
-  passkeys first and the WebView fallback is not guaranteed to be graceful.
-- **Reader / extract mode**, find-in-page, share sheet, TTS
+- **Passkeys / WebAuthn.** Low priority for a local-first browser without cloud accounts. Passwords are supported via Android native Autofill services (Bitwarden, 1Password, KeePassDX, etc.) and WebExtensions installed via AMO.
+- **Reader / extract mode, TTS.** Reading is already Clear Browser's primary experience thanks to the uncluttered layout, auto-hiding navigation handle, and uBlock Origin ad and clutter elimination.

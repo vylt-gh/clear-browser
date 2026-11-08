@@ -51,6 +51,7 @@ fun ReadingScreen(
     history: List<dev.clearbrowser.core.data.HistoryEntry>,
     downloads: List<dev.clearbrowser.core.data.DownloadItem> = emptyList(),
     installedExtensions: List<dev.clearbrowser.core.engine.ExtensionInfo> = emptyList(),
+    sitePermissions: List<dev.clearbrowser.core.data.SitePermission> = emptyList(),
     attachEngine: (ViewGroup) -> Unit,
     onSystemDarkChange: (Boolean) -> Unit,
     onBack: () -> Unit,
@@ -96,11 +97,15 @@ fun ReadingScreen(
     onOpenDownloads: () -> Unit = {},
     onOpenDownload: (dev.clearbrowser.core.data.DownloadItem) -> Unit = {},
     onRemoveDownload: (Long) -> Unit = {},
+    onExportBookmarks: () -> Unit = {},
+    onImportBookmarks: () -> Unit = {},
     onOpenExtensions: () -> Unit = {},
     onCloseExtensions: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onCloseSettings: () -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onRevokeSitePermission: (String, String) -> Unit = { _, _ -> },
+    onClearAllSitePermissions: () -> Unit = {},
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (dev.clearbrowser.core.data.ChromeTheme) -> Unit = {},
     onHideHandleChange: (Boolean) -> Unit = {},
@@ -285,6 +290,9 @@ fun ReadingScreen(
                     onChromeThemeChange = onChromeThemeChange,
                     onHideHandleChange = onHideHandleChange,
                     onClearBrowsingData = onClearBrowsingData,
+                    sitePermissions = sitePermissions,
+                    onRevokeSitePermission = onRevokeSitePermission,
+                    onClearAllSitePermissions = onClearAllSitePermissions,
                 )
             }
 
@@ -341,6 +349,8 @@ fun ReadingScreen(
                     onClearHistory = onClearHistory,
                     onOpenDownload = onOpenDownload,
                     onRemoveDownload = onRemoveDownload,
+                    onExportBookmarks = onExportBookmarks,
+                    onImportBookmarks = onImportBookmarks,
                     onDismiss = onCloseLibrary,
                 )
             }

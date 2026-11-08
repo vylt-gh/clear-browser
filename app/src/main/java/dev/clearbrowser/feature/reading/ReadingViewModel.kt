@@ -175,6 +175,7 @@ class ReadingViewModel(
     private val historyStore: HistoryStore? = null,
     private val bookmarkStore: BookmarkStore? = null,
     private val downloadsStore: dev.clearbrowser.core.data.DownloadsStore? = null,
+    private val sitePermissionStore: dev.clearbrowser.core.data.SitePermissionStore? = null,
     private val suggestionsFetcher: dev.clearbrowser.core.data.SearchSuggestionsFetcher = dev.clearbrowser.core.data.DefaultSearchSuggestionsFetcher,
 ) : ViewModel() {
 
@@ -299,6 +300,12 @@ class ReadingViewModel(
 
     private val fallbackDownloads =
         MutableStateFlow<List<dev.clearbrowser.core.data.DownloadItem>>(emptyList())
+
+    val sitePermissions: StateFlow<List<dev.clearbrowser.core.data.SitePermission>>
+        get() = sitePermissionStore?.permissions ?: fallbackSitePermissions
+
+    private val fallbackSitePermissions =
+        MutableStateFlow<List<dev.clearbrowser.core.data.SitePermission>>(emptyList())
 
     val installedExtensions: StateFlow<List<dev.clearbrowser.core.engine.ExtensionInfo>>
         get() = ClearGeckoRuntime.installedExtensions
@@ -1647,6 +1654,25 @@ class ReadingViewModel(
         historyStore?.clear()
     }
 
+    fun exportBookmarksHtml(): String = bookmarkStore?.exportHtml().orEmpty()
+
+    fun importBookmarks(content: String): Int = bookmarkStore?.importBookmarks(content) ?: 0
+
+    fun revokeSitePermission(origin: String, type: String) {
+        sitePermissionStore?.revoke(origin, type)
+        ClearGeckoRuntime.revokePermissionFromHost(origin)
+    }
+
+    fun revokeSitePermissionsForOrigin(origin: String) {
+        sitePermissionStore?.revokeOrigin(origin)
+        ClearGeckoRuntime.revokePermissionFromHost(origin)
+    }
+
+    fun clearAllSitePermissions() {
+        sitePermissionStore?.clearAll()
+        ClearGeckoRuntime.clearAllPermissions()
+    }
+
     /** The neutral surface for this scheme. Never black. */
     private fun neutralFallback(): Int = if (isSystemDark) 0xFF141218.toInt() else 0xFFF7F2FA.toInt()
 
@@ -1670,10 +1696,20 @@ class ReadingViewModel(
         private val historyStore: HistoryStore,
         private val bookmarkStore: BookmarkStore,
         private val downloadsStore: dev.clearbrowser.core.data.DownloadsStore? = null,
+        private val sitePermissionStore: dev.clearbrowser.core.data.SitePermissionStore? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            ReadingViewModel(null, settingsStore, sessionStore, null, historyStore, bookmarkStore, downloadsStore) as T
+            ReadingViewModel(
+                null,
+                settingsStore,
+                sessionStore,
+                null,
+                historyStore,
+                bookmarkStore,
+                downloadsStore,
+                sitePermissionStore = sitePermissionStore,
+            ) as T
     }
 
     private companion object {

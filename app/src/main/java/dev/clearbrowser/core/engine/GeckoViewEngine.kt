@@ -402,6 +402,8 @@ class GeckoViewEngine(
                             hasInput = false,
                             withCancel = true,
                             onAccept = {
+                                dev.clearbrowser.core.data.SitePermissionStore.forContext(context)
+                                    .recordPermission(hostName, permTypeStr)
                                 result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
                             },
                             onDismiss = {
@@ -440,6 +442,8 @@ class GeckoViewEngine(
                             hasInput = false,
                             withCancel = true,
                             onAccept = {
+                                dev.clearbrowser.core.data.SitePermissionStore.forContext(context)
+                                    .recordPermission(hostName, deviceStr)
                                 callback.grant(video?.firstOrNull(), audio?.firstOrNull())
                             },
                             onDismiss = {

@@ -50,6 +50,10 @@ class MainActivity : ComponentActivity() {
         dev.clearbrowser.core.data.DownloadsStore(applicationContext)
     }
 
+    private val sitePermissions: dev.clearbrowser.core.data.SitePermissionStore by lazy {
+        dev.clearbrowser.core.data.SitePermissionStore.forContext(applicationContext)
+    }
+
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
@@ -337,7 +341,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Browser() {
         val viewModel: ReadingViewModel = viewModel(
-            factory = ReadingViewModel.Factory(settings, sessionStore, history, bookmarks, downloads),
+            factory = ReadingViewModel.Factory(settings, sessionStore, history, bookmarks, downloads, sitePermissions),
         )
         // Assigned for onNewIntent and the lifecycle callbacks, which all
         // arrive outside composition.
@@ -352,6 +356,42 @@ class MainActivity : ComponentActivity() {
         val bookmarkEntries by viewModel.bookmarks.collectAsStateWithLifecycle()
         val downloadEntries by viewModel.downloads.collectAsStateWithLifecycle()
         val installedExtensions by viewModel.installedExtensions.collectAsStateWithLifecycle()
+        val sitePermissionsList by viewModel.sitePermissions.collectAsStateWithLifecycle()
+
+        val exportBookmarksLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/html"),
+        ) { uri ->
+            if (uri != null) {
+                runCatching {
+                    contentResolver.openOutputStream(uri)?.use { os ->
+                        os.write(viewModel.exportBookmarksHtml().toByteArray(Charsets.UTF_8))
+                    }
+                    Toast.makeText(this@MainActivity, R.string.toast_bookmarks_exported, Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(this@MainActivity, "Failed to export bookmarks", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        val importBookmarksLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            if (uri != null) {
+                runCatching {
+                    val content = contentResolver.openInputStream(uri)?.use { inputStream ->
+                        inputStream.bufferedReader(Charsets.UTF_8).readText()
+                    }.orEmpty()
+                    val count = viewModel.importBookmarks(content)
+                    Toast.makeText(
+                        this@MainActivity,
+                        getString(R.string.toast_bookmarks_imported, count),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }.onFailure {
+                    Toast.makeText(this@MainActivity, "Failed to import bookmarks", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
 
         // Recorded before the engine attaches, so the very first load is the
         // requested page rather than a detour through the start page.
@@ -430,6 +470,7 @@ class MainActivity : ComponentActivity() {
             history = historyEntries,
             downloads = downloadEntries,
             installedExtensions = installedExtensions,
+            sitePermissions = sitePermissionsList,
             attachEngine = { parent -> viewModel.attach(parent, this, host) },
             onSystemDarkChange = viewModel::setSystemDark,
             onBack = viewModel::goBack,
@@ -442,6 +483,8 @@ class MainActivity : ComponentActivity() {
             onOpenDownloads = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.DOWNLOADS) },
             onOpenDownload = ::openDownload,
             onRemoveDownload = viewModel::removeDownload,
+            onExportBookmarks = { exportBookmarksLauncher.launch("bookmarks.html") },
+            onImportBookmarks = { importBookmarksLauncher.launch(arrayOf("text/html", "text/plain", "application/json", "*/*")) },
             onOpenExtensions = viewModel::openExtensions,
             onCloseExtensions = viewModel::closeExtensions,
             onOpenExtensionPopup = viewModel::openExtensionPopup,
@@ -450,6 +493,8 @@ class MainActivity : ComponentActivity() {
             onCloseExtensionPopup = viewModel::closeExtensionPopup,
             onOpenSettings = viewModel::openSettings,
             onCloseSettings = viewModel::closeSettings,
+            onRevokeSitePermission = viewModel::revokeSitePermission,
+            onClearAllSitePermissions = viewModel::clearAllSitePermissions,
             onClearBrowsingData = { h, c, k ->
                 viewModel.clearBrowsingData(h, c, k)
                 Toast.makeText(this@MainActivity, R.string.toast_browsing_data_cleared, Toast.LENGTH_SHORT).show()

@@ -98,6 +98,29 @@ object ClearGeckoRuntime {
         }
     }
 
+    val geckoViewVersion: String
+        get() = runCatching {
+            val ver = org.mozilla.geckoview.BuildConfig.MOZILLA_VERSION
+            val buildId = org.mozilla.geckoview.BuildConfig.MOZ_APP_BUILDID
+            if (!buildId.isNullOrBlank()) "$ver ($buildId)" else ver
+        }.getOrDefault("144.0")
+
+    fun revokePermissionFromHost(origin: String) {
+        val host = runCatching { android.net.Uri.parse(origin).host }.getOrNull() ?: origin
+        instance?.storageController?.clearDataFromHost(
+            host,
+            org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS or
+                org.mozilla.geckoview.StorageController.ClearFlags.SITE_SETTINGS,
+        )
+    }
+
+    fun clearAllPermissions() {
+        instance?.storageController?.clearData(
+            org.mozilla.geckoview.StorageController.ClearFlags.PERMISSIONS or
+                org.mozilla.geckoview.StorageController.ClearFlags.SITE_SETTINGS,
+        )
+    }
+
     fun setPreferredColorScheme(scheme: Int) {
         instance?.settings?.setPreferredColorScheme(scheme)
     }

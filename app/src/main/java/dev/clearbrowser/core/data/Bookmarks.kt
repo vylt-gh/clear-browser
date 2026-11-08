@@ -60,6 +60,26 @@ class BookmarkList(initial: List<Bookmark> = emptyList()) {
         items.clear()
     }
 
+    /**
+     * Merge new bookmarks into the list, deduplicating by normalized URL.
+     *
+     * @return Number of new bookmarks successfully imported.
+     */
+    fun import(newEntries: List<Bookmark>): Int {
+        var count = 0
+        newEntries.forEach { entry ->
+            val normalized = normalizeWebUrl(entry.url) ?: return@forEach
+            if (items.none { it.url == normalized }) {
+                items.add(entry.copy(url = normalized, title = entry.title.trim()))
+                count++
+            }
+        }
+        if (count > 0) {
+            items.sortByDescending { it.createdAtMillis }
+        }
+        return count
+    }
+
     /** Replace the list with what was read from disk, applying the same rules. */
     fun restore(entries: List<Bookmark>) {
         items.clear()

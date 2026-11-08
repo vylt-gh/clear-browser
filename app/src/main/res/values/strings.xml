@@ -142,4 +142,15 @@
     <string name="context_menu_open_image_new_tab">Open image in new tab</string>
     <string name="context_menu_copy_image_link">Copy image link</string>
     <string name="context_menu_download_image">Download image</string>
+    <string name="library_export_bookmarks">Export bookmarks</string>
+    <string name="library_import_bookmarks">Import bookmarks</string>
+    <string name="toast_bookmarks_exported">Bookmarks exported successfully</string>
+    <string name="toast_bookmarks_imported">%1$d bookmarks imported</string>
+    <string name="settings_about_title">About Clear Browser</string>
+    <string name="settings_engine_version">Engine: Mozilla GeckoView %1$s</string>
+    <string name="settings_site_permissions">Site permissions</string>
+    <string name="settings_site_permissions_subtitle">Manage permissions granted to websites</string>
+    <string name="settings_site_permissions_empty">No websites currently have saved permissions</string>
+    <string name="settings_site_permissions_revoke">Revoke</string>
+    <string name="settings_site_permissions_revoke_all">Revoke all</string>
 </resources>

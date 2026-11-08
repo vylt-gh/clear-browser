@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose%20%7C%20Material%203-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose & Material 3" />
   <img src="https://img.shields.io/badge/compileSdk-37.2-informational" alt="compileSdk 37.2" />
-  <img src="https://img.shields.io/badge/Tests-106%20passing-success" alt="Tests: 106 passing" />
+  <img src="https://img.shields.io/badge/Tests-110%20passing-success" alt="Tests: 110 passing" />
 </p>
 
 ---
@@ -26,14 +26,16 @@ The web page is the content; the chrome is just the tool. When you scroll to rea
 ## Preview
 
 <p align="center">
-  <img src="reading.png" alt="Clear Browser Reading Mode" width="240" />
+  <img src="preview-chrome.png" alt="Clear Browser Navigation Chrome" width="190" />
   &nbsp;&nbsp;
-  <img src="minimized.png" alt="Clear Browser Minimized Handle" width="240" />
+  <img src="preview-popup.png" alt="Anchored Bubble Popup Menu" width="190" />
   &nbsp;&nbsp;
-  <img src="inc-menu.png" alt="Clear Browser Menu and Settings Sheet" width="240" />
+  <img src="preview-settings.png" alt="Settings & Chrome Visual Themes" width="190" />
+  &nbsp;&nbsp;
+  <img src="preview-history.png" alt="Library, History & Bookmarks" width="190" />
 </p>
 <p align="center">
-  <em>Navigation Bar &nbsp;•&nbsp; Minimized Handle &nbsp;•&nbsp; Settings & Menu</em>
+  <em>Maximized Chrome &nbsp;•&nbsp; Anchored Popup Menu &nbsp;•&nbsp; Settings & Themes &nbsp;•&nbsp; Library & History</em>
 </p>
 
 ---
@@ -189,7 +191,7 @@ clear-browser/
 │   │   │   │   │   └── theme/                 # M3 color palettes & spring motion
 │   │   │   │   └── feature/reading/           # Compose screens, sheets & ViewModel
 │   │   │   └── res/                           # Drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 106 Pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 110 Pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   └── OPEN_ISSUES.md                         # Architecture notes and design records

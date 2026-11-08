@@ -60,6 +60,17 @@ class BookmarkStore internal constructor(private val file: File) {
         publish()
     }
 
+    fun exportHtml(): String = BookmarkCodec.exportToHtml(snapshot)
+
+    fun importBookmarks(content: String): Int {
+        val parsed = BookmarkCodec.importFromHtmlOrJson(content)
+        val count = list.import(parsed)
+        if (count > 0) {
+            publish()
+        }
+        return count
+    }
+
     private fun publish() {
         snapshot = list.entries
         _entries.value = snapshot

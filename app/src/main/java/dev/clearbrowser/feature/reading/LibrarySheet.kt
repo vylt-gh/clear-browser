@@ -22,6 +22,8 @@ import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.PictureAsPdf
@@ -106,6 +108,8 @@ fun LibrarySheet(
     onClearHistory: () -> Unit,
     onOpenDownload: (DownloadItem) -> Unit = {},
     onRemoveDownload: (Long) -> Unit = {},
+    onExportBookmarks: () -> Unit = {},
+    onImportBookmarks: () -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -230,6 +234,22 @@ fun LibrarySheet(
                 if (tab == LibraryTab.HISTORY && history.isNotEmpty()) {
                     TextButton(onClick = { confirmClear = true }) {
                         Text(stringResource(R.string.library_clear))
+                    }
+                }
+                if (tab == LibraryTab.BOOKMARKS) {
+                    IconButton(onClick = onImportBookmarks) {
+                        Icon(
+                            imageVector = Icons.Rounded.FileDownload,
+                            contentDescription = stringResource(R.string.library_import_bookmarks),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = onExportBookmarks) {
+                        Icon(
+                            imageVector = Icons.Rounded.FileUpload,
+                            contentDescription = stringResource(R.string.library_export_bookmarks),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
