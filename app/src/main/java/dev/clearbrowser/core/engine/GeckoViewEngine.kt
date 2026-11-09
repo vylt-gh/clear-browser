@@ -859,7 +859,7 @@ class GeckoViewEngine(
     }
 
     override fun sampleChromeBackdrop() {
-        chromeBackdropSampler.sample(geckoView)
+        chromeBackdropSampler.sample(geckoView, force = true)
     }
 
     companion object {

@@ -113,9 +113,6 @@ data class BrowserSettings(
     /** Show in-progress download bars on the canopy at the top of the screen. */
     val canopyDownloads: Boolean = true,
 
-    /** Disable auto-hiding chrome on scroll; hide via long-press on address bar or menu. */
-    val hideChromeOnPress: Boolean = false,
-
     /** Whether to auto-accept all site permission requests without prompting. */
     val autoAcceptAllPermissions: Boolean = false,
 
@@ -178,8 +175,6 @@ class SettingsStore(context: Context) {
 
     fun setCanopyDownloads(enabled: Boolean) = update { it.copy(canopyDownloads = enabled) }
 
-    fun setHideChromeOnPress(enabled: Boolean) = update { it.copy(hideChromeOnPress = enabled) }
-
     fun setAutoAcceptAllPermissions(enabled: Boolean) = update { it.copy(autoAcceptAllPermissions = enabled) }
 
     fun setAutoAcceptPermissions(permissions: Set<String>) = update { it.copy(autoAcceptPermissions = permissions) }
@@ -214,7 +209,6 @@ class SettingsStore(context: Context) {
             .putBoolean(KEY_HIDE_HANDLE, next.hideHandle)
             .putBoolean(KEY_PULL_TO_REFRESH, next.pullToRefresh)
             .putBoolean(KEY_CANOPY_DOWNLOADS, next.canopyDownloads)
-            .putBoolean(KEY_HIDE_CHROME_ON_PRESS, next.hideChromeOnPress)
             .putBoolean(KEY_AUTO_ACCEPT_ALL_PERMISSIONS, next.autoAcceptAllPermissions)
             .putStringSet(KEY_AUTO_ACCEPT_PERMISSIONS, next.autoAcceptPermissions)
             .putBoolean(KEY_ONBOARDING_COMPLETED, next.onboardingCompleted)
@@ -248,7 +242,6 @@ class SettingsStore(context: Context) {
         hideHandle = prefs.getBoolean(KEY_HIDE_HANDLE, false),
         pullToRefresh = prefs.getBoolean(KEY_PULL_TO_REFRESH, true),
         canopyDownloads = prefs.getBoolean(KEY_CANOPY_DOWNLOADS, true),
-        hideChromeOnPress = prefs.getBoolean(KEY_HIDE_CHROME_ON_PRESS, false),
         autoAcceptAllPermissions = prefs.getBoolean(KEY_AUTO_ACCEPT_ALL_PERMISSIONS, false),
         autoAcceptPermissions = prefs.getStringSet(KEY_AUTO_ACCEPT_PERMISSIONS, emptySet())?.toSet() ?: emptySet(),
         onboardingCompleted = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false),
@@ -269,7 +262,6 @@ class SettingsStore(context: Context) {
         const val KEY_HIDE_HANDLE = "hide_handle"
         const val KEY_PULL_TO_REFRESH = "pull_to_refresh"
         const val KEY_CANOPY_DOWNLOADS = "canopy_downloads"
-        const val KEY_HIDE_CHROME_ON_PRESS = "hide_chrome_on_press"
         const val KEY_AUTO_ACCEPT_ALL_PERMISSIONS = "auto_accept_all_permissions"
         const val KEY_AUTO_ACCEPT_PERMISSIONS = "auto_accept_permissions"
         const val KEY_ORIGINAL_M3_CHROME = "original_material3_chrome"

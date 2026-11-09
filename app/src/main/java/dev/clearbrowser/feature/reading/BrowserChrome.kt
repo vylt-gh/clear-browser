@@ -246,17 +246,26 @@ fun ChromeSurface(
         val expandedWidthPx = with(density) { expandedWidth.toPx() }
         val currentOffsetPx = with(density) { currentOffset.toPx() }
         val hideOffsetYPx = with(density) { hideOffsetY.toPx() }
-        val hasBackdrop = state.backdropBlur != null && chromeTheme == ChromeTheme.CLEAR
+        val hasBackdrop = state.backdropBlur != null && (chromeTheme == ChromeTheme.CLEAR || chromeTheme == ChromeTheme.ACRYLIC)
         val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark, hasBackdrop)
 
         val colorScheme = MaterialTheme.colorScheme
-        val acrylicBackground = remember(colorScheme) {
-            Brush.verticalGradient(
-                listOf(
-                    colorScheme.surfaceContainer.copy(alpha = 0.88f),
-                    colorScheme.surfaceContainer.copy(alpha = 0.78f),
+        val acrylicBackground = remember(colorScheme, hasBackdrop) {
+            if (hasBackdrop) {
+                Brush.verticalGradient(
+                    listOf(
+                        colorScheme.surfaceContainer.copy(alpha = 0.65f),
+                        colorScheme.surfaceContainer.copy(alpha = 0.55f),
+                    )
                 )
-            )
+            } else {
+                Brush.verticalGradient(
+                    listOf(
+                        colorScheme.surfaceContainer.copy(alpha = 0.88f),
+                        colorScheme.surfaceContainer.copy(alpha = 0.78f),
+                    )
+                )
+            }
         }
         val acrylicBorder = remember(colorScheme) {
             Brush.verticalGradient(
@@ -344,6 +353,17 @@ fun ChromeSurface(
                             shape = CircleShape,
                         )
                         .clip(CircleShape)
+                        .drawBehind {
+                            val blur = state.backdropBlur
+                            if (blur != null) {
+                                drawImage(
+                                    image = blur,
+                                    dstOffset = IntOffset(-currentOffsetPx.roundToInt(), -hideOffsetYPx.roundToInt()),
+                                    dstSize = IntSize(expandedWidthPx.roundToInt(), size.height.roundToInt()),
+                                    filterQuality = FilterQuality.Low,
+                                )
+                            }
+                        }
                         .background(acrylicBackground)
                         .border(BorderStroke(1.dp, acrylicBorder), CircleShape)
                 }

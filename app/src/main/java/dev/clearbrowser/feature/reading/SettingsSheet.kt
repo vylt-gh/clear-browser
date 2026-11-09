@@ -95,7 +95,6 @@ fun SettingsSheet(
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (ChromeTheme) -> Unit = {},
     onHideHandleChange: (Boolean) -> Unit = {},
-    onHideChromeOnPressChange: (Boolean) -> Unit = {},
     onPullToRefreshChange: (Boolean) -> Unit = {},
     onCanopyDownloadsChange: (Boolean) -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit,
@@ -199,12 +198,6 @@ fun SettingsSheet(
                 subtitle = stringResource(R.string.menu_auto_hide_subtitle),
                 checked = settings.autoHideChrome,
                 onCheckedChange = onAutoHideChange,
-            )
-            SwitchRow(
-                title = stringResource(R.string.settings_hide_chrome_on_press),
-                subtitle = stringResource(R.string.settings_hide_chrome_on_press_subtitle),
-                checked = settings.hideChromeOnPress,
-                onCheckedChange = onHideChromeOnPressChange,
             )
             SwitchRow(
                 title = stringResource(R.string.menu_hide_handle),

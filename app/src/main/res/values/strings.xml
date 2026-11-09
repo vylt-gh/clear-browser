@@ -142,8 +142,6 @@
     <string name="toast_shortcut_not_supported">Your home screen does not support pinned shortcuts</string>
     <string name="menu_hide_chrome">Hide navigation bar</string>
     <string name="toast_link_copied">Link copied to clipboard</string>
-    <string name="settings_hide_chrome_on_press">Press to hide bar</string>
-    <string name="settings_hide_chrome_on_press_subtitle">Disables auto-hiding on scroll. Long-press the address bar or use the menu to hide.</string>
     <string name="settings_text_zoom">Text scaling</string>
     <string name="settings_text_zoom_subtitle">Scale text size across web pages</string>
     <string name="settings_clear_history">Browsing history</string>

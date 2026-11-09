@@ -1585,7 +1585,6 @@ class ReadingViewModel(
 
     private fun hideForReading() {
         if (!_state.value.settings.autoHideChrome) return
-        if (_state.value.settings.hideChromeOnPress) return
         val mode = _state.value.chromeMode
         // Never yank the chrome out from under something being typed into or
         // read in a sheet.

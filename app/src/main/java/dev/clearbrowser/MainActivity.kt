@@ -709,7 +709,6 @@ class MainActivity : ComponentActivity() {
             onSearchEngineChange = settings::setSearchEngine,
             onAutoHideChange = settings::setAutoHideChrome,
             onHideHandleChange = settings::setHideHandle,
-            onHideChromeOnPressChange = settings::setHideChromeOnPress,
             onPullToRefreshChange = settings::setPullToRefresh,
             onCanopyDownloadsChange = settings::setCanopyDownloads,
             onAutoAcceptAllPermissionsChange = settings::setAutoAcceptAllPermissions,

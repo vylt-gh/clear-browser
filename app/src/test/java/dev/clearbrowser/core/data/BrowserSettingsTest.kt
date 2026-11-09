@@ -123,18 +123,6 @@ class BrowserSettingsTest {
     }
 
     @Test
-    fun defaultHideChromeOnPressIsFalse() {
-        val settings = BrowserSettings()
-        assertEquals(false, settings.hideChromeOnPress)
-    }
-
-    @Test
-    fun customHideChromeOnPressIsRetained() {
-        val settings = BrowserSettings(hideChromeOnPress = true)
-        assertEquals(true, settings.hideChromeOnPress)
-    }
-
-    @Test
     fun defaultAutoAcceptPermissionsIsEmpty() {
         val settings = BrowserSettings()
         assertEquals(emptySet<String>(), settings.autoAcceptPermissions)
