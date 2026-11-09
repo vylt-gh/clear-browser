@@ -1,39 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Flat black, so the launcher's own mask supplies the disc.
+  Adaptive launcher icon background for Clear Browser (logo v2).
 
-  The source artwork is a finished round icon: an opaque black circle with the
-  mark on it, already masked. Putting that whole image into the *foreground*
-  layer would have the launcher mask it a second time, and the mark would end up
-  both cropped and shrunk. So the black is the background layer, where a mask is
-  exactly what is wanted, and only the mark is a foreground.
+  The source artwork is a finished round icon: a circular badge with a linear gradient
+  from #211F26 to #4A4458 (at 315° / TL-to-BR) with the white "C" mark.
+  Putting that whole image into the *foreground* layer would have the launcher mask it
+  a second time, so the gradient is the background layer where the launcher's mask
+  supplies the disc/squircle, and only the "C" mark is the foreground.
 
-  ## Sizing the foreground, and why it is not a round number
+  ## Sizing the foreground
 
   The mark PNGs are cut from the artwork at a scale that preserves the artwork's
-  own proportion of mark to disc, rather than at some "safe" constant. Two
-  things had to be pinned down for that to be possible:
-
-    - The launcher's visible disc is 36dp in radius within the 108dp viewport.
-      Measured off the device rather than assumed, because a launcher is free to
-      choose and this one does not use the whole canvas.
-
-    - The artwork's own ratio, measured as the mark's furthest pixel from the
-      disc centre, divided by the disc radius.
-
-  Mark radius = ratio x 36. For the current artwork the ratio is 0.682, giving a
-  24.5dp mark.
-
-  An earlier version hardcoded 31dp, which is inside the 33dp safe circle and so
-  looked defensible, but it produced a mark/disc ratio of 0.861 against the
-  artwork's 0.804, which is visibly larger in the launcher than in an image
-  editor, because the editor shows the whole canvas while the launcher shows only
-  the masked disc. Deriving the scale from the artwork is the only way that
-  cannot drift.
-
-  If the artwork is replaced, re-measure the ratio rather than reusing 24.5.
+  own proportion of mark to disc:
+    - Visible disc radius in launcher: 36dp (within 108dp viewport).
+    - Artwork disc radius: 256px.
+    - Artwork mark furthest pixel from center: 155.72px (radius ratio = 0.6083).
+    - Resulting mark radius in launcher: 21.9dp (comfortably within 33dp safe circle).
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="@android:color/black" />
+    <gradient
+        android:type="linear"
+        android:angle="315"
+        android:startColor="#211F26"
+        android:endColor="#4A4458" />
 </shape>
