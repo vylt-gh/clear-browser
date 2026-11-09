@@ -81,8 +81,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import dev.clearbrowser.R
@@ -241,6 +243,9 @@ fun ChromeSurface(
         val isDark = resolveIsDark(state.settings.appTheme, isSystemInDarkTheme())
         val chromeTheme = state.settings.chromeTheme
         val hideOffsetY = if (!handleExisted) lerpDp(HANDLE_SIZE + HANDLE_MARGIN * 3, 0.dp, progress) else 0.dp
+        val expandedWidthPx = with(density) { expandedWidth.toPx() }
+        val currentOffsetPx = with(density) { currentOffset.toPx() }
+        val hideOffsetYPx = with(density) { hideOffsetY.toPx() }
         val hasBackdrop = state.backdropBlur != null && chromeTheme == ChromeTheme.CLEAR
         val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark, hasBackdrop)
 
@@ -314,7 +319,8 @@ fun ChromeSurface(
                             if (blur != null) {
                                 drawImage(
                                     image = blur,
-                                    dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                                    dstOffset = IntOffset(-currentOffsetPx.roundToInt(), -hideOffsetYPx.roundToInt()),
+                                    dstSize = IntSize(expandedWidthPx.roundToInt(), size.height.roundToInt()),
                                     filterQuality = FilterQuality.Low,
                                 )
                             }

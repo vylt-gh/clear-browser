@@ -28,7 +28,7 @@ class ChromeBackdropSampler(
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isSampling = false
 
-    private val sampleWidth = 80
+    private val sampleWidth = 84
     private val sampleHeight = 12
 
     private val sampleBmp = Bitmap.createBitmap(sampleWidth, sampleHeight, Bitmap.Config.ARGB_8888)
@@ -55,11 +55,17 @@ class ChromeBackdropSampler(
 
         val density = surfaceView.resources.displayMetrics.density
         val marginPx = (12 * density).toInt()
-        val barHeightPx = (48 * density).toInt()
-        val padPx = (6 * density).toInt()
-        val bottom = (height - marginPx + padPx).coerceAtMost(height)
-        val top = (bottom - barHeightPx - padPx * 2).coerceAtLeast(0)
-        val srcRect = Rect(0, top, width, bottom)
+        val barHeightPx = (56 * density).toInt()
+        if (width <= marginPx * 2 || height <= barHeightPx) {
+            isSampling = false
+            return
+        }
+
+        val bottom = (height - marginPx).coerceAtMost(height)
+        val top = (bottom - barHeightPx).coerceAtLeast(0)
+        val left = marginPx.coerceIn(0, width)
+        val right = (width - marginPx).coerceIn(left + 1, width)
+        val srcRect = Rect(left, top, right, bottom)
 
         try {
             PixelCopy.request(
