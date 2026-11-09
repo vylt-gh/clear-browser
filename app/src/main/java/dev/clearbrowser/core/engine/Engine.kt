@@ -198,6 +198,9 @@ interface EngineListener {
     /** Context menu requested (e.g. long-press on link, image, or media). */
     fun onContextMenu(info: ContextMenuInfo) = Unit
 
+    /** An external download was started from this tab (e.g. Content-Disposition: attachment). */
+    fun onExternalDownloadStarted(url: String) = Unit
+
     /** WebExtension requested to open its interactive popup view tied to this session. */
     fun onExtensionPopupRequested(extensionId: String, title: String, session: Any) = Unit
 }

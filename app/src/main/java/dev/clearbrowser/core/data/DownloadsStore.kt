@@ -3,10 +3,16 @@ package dev.clearbrowser.core.data
 import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** A single file download recorded by Android's [DownloadManager]. */
@@ -24,7 +30,13 @@ data class DownloadItem(
 /**
  * Manages completed and in-flight downloads by querying Android's system [DownloadManager].
  */
-class DownloadsStore(private val context: Context) {
+class DownloadsStore(
+    private val context: Context,
+    private val notificationManager: DownloadNotificationManager = DownloadNotificationManager(context),
+) {
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var pollingJob: Job? = null
 
     private val _downloads = MutableStateFlow<List<DownloadItem>>(emptyList())
     val downloads: StateFlow<List<DownloadItem>> = _downloads.asStateFlow()
@@ -33,8 +45,44 @@ class DownloadsStore(private val context: Context) {
         context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
     }
 
+    fun onDownloadEnqueued(id: Long, filename: String) {
+        scope.launch {
+            refresh()
+            startPolling()
+        }
+    }
+
+    fun startPolling() {
+        if (pollingJob?.isActive == true) return
+        pollingJob = scope.launch {
+            while (isActive) {
+                refreshInternal()
+                val current = _downloads.value
+                notificationManager.updateNotifications(current)
+                val hasActive = current.any {
+                    it.status == DownloadManager.STATUS_RUNNING || it.status == DownloadManager.STATUS_PENDING
+                }
+                if (!hasActive) break
+                delay(600)
+            }
+            pollingJob = null
+        }
+    }
+
     suspend fun refresh() = withContext(Dispatchers.IO) {
-        val manager = downloadManager ?: return@withContext
+        refreshInternal()
+        val current = _downloads.value
+        notificationManager.updateNotifications(current)
+        val hasActive = current.any {
+            it.status == DownloadManager.STATUS_RUNNING || it.status == DownloadManager.STATUS_PENDING
+        }
+        if (hasActive) {
+            startPolling()
+        }
+    }
+
+    private fun refreshInternal() {
+        val manager = downloadManager ?: return
         val items = mutableListOf<DownloadItem>()
         runCatching {
             val query = DownloadManager.Query()
@@ -83,6 +131,7 @@ class DownloadsStore(private val context: Context) {
     }
 
     suspend fun remove(id: Long) = withContext(Dispatchers.IO) {
+        notificationManager.cancel(id)
         runCatching {
             downloadManager?.remove(id)
         }
@@ -97,3 +146,4 @@ class DownloadsStore(private val context: Context) {
         return runCatching { downloadManager?.getMimeTypeForDownloadedFile(id) }.getOrNull()
     }
 }
+

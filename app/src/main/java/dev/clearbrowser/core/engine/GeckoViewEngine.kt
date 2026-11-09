@@ -304,6 +304,10 @@ class GeckoViewEngine(
                 val contentLength = (response.headers["content-length"]
                     ?: response.headers["Content-Length"])?.toLongOrNull() ?: -1L
 
+                mainHandler.post {
+                    listener.onExternalDownloadStarted(response.uri)
+                }
+
                 host.startDownload(
                     DownloadRequest(
                         url = response.uri,

@@ -107,6 +107,9 @@ data class BrowserSettings(
     /** Pull down from the top of the page to refresh. */
     val pullToRefresh: Boolean = true,
 
+    /** Show in-progress download bars on the canopy at the top of the screen. */
+    val canopyDownloads: Boolean = true,
+
     /** Whether the first-launch onboarding walkthrough has been completed or dismissed. */
     val onboardingCompleted: Boolean = false,
 ) {
@@ -151,6 +154,8 @@ class SettingsStore(context: Context) {
 
     fun setPullToRefresh(enabled: Boolean) = update { it.copy(pullToRefresh = enabled) }
 
+    fun setCanopyDownloads(enabled: Boolean) = update { it.copy(canopyDownloads = enabled) }
+
     fun setOnboardingCompleted(completed: Boolean = true) =
         update { it.copy(onboardingCompleted = completed) }
 
@@ -173,6 +178,7 @@ class SettingsStore(context: Context) {
             .putString(KEY_CHROME_THEME, next.chromeTheme.name)
             .putBoolean(KEY_HIDE_HANDLE, next.hideHandle)
             .putBoolean(KEY_PULL_TO_REFRESH, next.pullToRefresh)
+            .putBoolean(KEY_CANOPY_DOWNLOADS, next.canopyDownloads)
             .putBoolean(KEY_ONBOARDING_COMPLETED, next.onboardingCompleted)
             .apply()
     }
@@ -202,6 +208,7 @@ class SettingsStore(context: Context) {
             ?: if (prefs.getBoolean(KEY_ORIGINAL_M3_CHROME, false)) ChromeTheme.ACRYLIC else ChromeTheme.CLEAR,
         hideHandle = prefs.getBoolean(KEY_HIDE_HANDLE, false),
         pullToRefresh = prefs.getBoolean(KEY_PULL_TO_REFRESH, true),
+        canopyDownloads = prefs.getBoolean(KEY_CANOPY_DOWNLOADS, true),
         onboardingCompleted = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false),
     )
 
@@ -218,6 +225,7 @@ class SettingsStore(context: Context) {
         const val KEY_CHROME_THEME = "chrome_theme"
         const val KEY_HIDE_HANDLE = "hide_handle"
         const val KEY_PULL_TO_REFRESH = "pull_to_refresh"
+        const val KEY_CANOPY_DOWNLOADS = "canopy_downloads"
         const val KEY_ORIGINAL_M3_CHROME = "original_material3_chrome"
         const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
     }

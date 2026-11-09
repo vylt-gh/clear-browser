@@ -1186,6 +1186,8 @@ class ReadingViewModel(
         private var visitedTitle: String = ""
         /** True once the load for [visitedUrl] finished, title or not. */
         private var visitCompleted = false
+        /** Last URL successfully loaded or committed in this tab. */
+        private var lastCommittedUrl: String = ""
 
         /**
          * Start recording a visit to [url].
@@ -1265,6 +1267,10 @@ class ReadingViewModel(
         }
 
         override fun onUrlChanged(url: String) {
+            val existingUrl = strip.tabs.find { it.id == tabId }?.url.orEmpty()
+            if (lastCommittedUrl.isBlank() && existingUrl.isNotBlank() && existingUrl != url) {
+                lastCommittedUrl = existingUrl
+            }
             strip.update(tabId) { it.copy(url = url) }
             publishTabs()
             // A new URL means the previous page is finished, so flush it before
@@ -1315,11 +1321,54 @@ class ReadingViewModel(
         }
 
         override fun onPageCommitted(url: String) {
+            lastCommittedUrl = url
             if (!isActive) return
             // Deferred: the view may not be laid out at its final size yet.
             viewModelScope.launch {
                 delay(SAMPLE_DELAY_MS)
                 tryApplyPendingScroll(tabId)
+            }
+        }
+
+        override fun onExternalDownloadStarted(url: String) {
+            // A download response does not render HTML into the tab. Clear any pending
+            // history entry for this file URL so it does not pollute the user's history.
+            visitedUrl = null
+            visitedTitle = ""
+            visitCompleted = false
+
+            val previousUrl = lastCommittedUrl
+            if (previousUrl.isNotBlank() && previousUrl != url) {
+                // Revert tab URL to the last valid page the user actually saw,
+                // preventing session restore from auto-reloading this download on restart.
+                strip.update(tabId) { it.copy(url = previousUrl) }
+                publishTabs()
+                if (isActive) {
+                    reportUrl(previousUrl)
+                    _state.value = _state.value.copy(
+                        url = previousUrl,
+                        loadState = LoadState.COMPLETE,
+                    )
+                    progressFlow.value = 0
+                }
+            } else {
+                // This tab was newly opened purely to trigger this download (e.g. window.open / target=_blank).
+                if (strip.tabs.size > 1) {
+                    closeTab(tabId)
+                } else {
+                    // Only tab: reset back to empty start page
+                    strip.update(tabId) { it.copy(url = "", title = "") }
+                    publishTabs()
+                    if (isActive) {
+                        reportUrl("")
+                        _state.value = _state.value.copy(
+                            url = "",
+                            title = "",
+                            loadState = LoadState.COMPLETE,
+                        )
+                        progressFlow.value = 0
+                    }
+                }
             }
         }
 

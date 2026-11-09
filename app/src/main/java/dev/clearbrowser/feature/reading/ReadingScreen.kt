@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,8 +16,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +58,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import dev.clearbrowser.JsDialogHost
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.ChromePosition
+import dev.clearbrowser.core.data.DownloadItem
 import dev.clearbrowser.core.engine.LoadState
 import dev.clearbrowser.core.engine.WebContainer
 import dev.clearbrowser.core.theme.ClearBrowserTheme
@@ -141,6 +146,7 @@ fun ReadingScreen(
     onChromeThemeChange: (dev.clearbrowser.core.data.ChromeTheme) -> Unit = {},
     onHideHandleChange: (Boolean) -> Unit = {},
     onPullToRefreshChange: (Boolean) -> Unit = {},
+    onCanopyDownloadsChange: (Boolean) -> Unit = {},
     onSharePage: () -> Unit = {},
     onCopyLink: () -> Unit = {},
     onShareUrl: (String, String) -> Unit = { _, _ -> },
@@ -250,6 +256,13 @@ fun ReadingScreen(
     val pullOffsetDp = with(density) { currentPullOffset.toDp() }
     val canopyHeight = statusBarTop + pullOffsetDp
 
+    val activeDownloads = remember(downloads) {
+        downloads.filter {
+            it.status == android.app.DownloadManager.STATUS_RUNNING ||
+                it.status == android.app.DownloadManager.STATUS_PENDING
+        }
+    }
+
     ClearBrowserTheme(
         isDark = isDark,
         dynamicColor = state.settings.dynamicColor,
@@ -343,6 +356,26 @@ fun ReadingScreen(
                                             scaleX = scale
                                             scaleY = scale
                                         },
+                                )
+                            }
+                        }
+                    }
+
+                    if (state.settings.canopyDownloads && activeDownloads.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.BottomCenter)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onOpenDownloads,
+                                ),
+                        ) {
+                            activeDownloads.forEach { download ->
+                                CanopyDownloadBar(
+                                    download = download,
+                                    isTopBarLight = state.isTopBarLight,
                                 )
                             }
                         }
@@ -475,6 +508,7 @@ fun ReadingScreen(
                     onChromeThemeChange = onChromeThemeChange,
                     onHideHandleChange = onHideHandleChange,
                     onPullToRefreshChange = onPullToRefreshChange,
+                    onCanopyDownloadsChange = onCanopyDownloadsChange,
                     onClearBrowsingData = onClearBrowsingData,
                     sitePermissions = sitePermissions,
                     onRevokeSitePermission = onRevokeSitePermission,
@@ -560,6 +594,55 @@ fun ReadingScreen(
                     onFinish = onCompleteOnboarding,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CanopyDownloadBar(
+    download: DownloadItem,
+    isTopBarLight: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val progress = if (download.totalSizeBytes > 0) {
+        (download.downloadedBytes.toFloat() / download.totalSizeBytes.toFloat()).coerceIn(0f, 1f)
+    } else {
+        null
+    }
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress ?: 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "canopy_download_progress",
+    )
+
+    val trackColor = if (isTopBarLight) {
+        Color.Black.copy(alpha = 0.12f)
+    } else {
+        Color.White.copy(alpha = 0.15f)
+    }
+
+    val indicatorColor = MaterialTheme.colorScheme.primary
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(3.5.dp)
+            .background(trackColor),
+    ) {
+        if (progress != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(animatedProgress)
+                    .fillMaxHeight()
+                    .background(indicatorColor),
+            )
+        } else {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxSize(),
+                color = indicatorColor,
+                trackColor = trackColor,
+            )
         }
     }
 }

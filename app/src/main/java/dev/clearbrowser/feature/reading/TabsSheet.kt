@@ -185,14 +185,23 @@ private fun TabRow(
                 val initial = (host.firstOrNull() ?: title.firstOrNull() ?: '•')
                     .uppercaseChar()
                     .toString()
+                val bgCircleColor = if (isBlank) {
+                    MaterialTheme.colorScheme.onSurface
+                } else if (active) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                }
+                val iconColor = if (isBlank) {
+                    MaterialTheme.colorScheme.surface
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
                 Box(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (active) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
-                            else MaterialTheme.colorScheme.surfaceContainerHigh
-                        ),
+                        .background(bgCircleColor),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (isBlank) {
@@ -200,7 +209,7 @@ private fun TabRow(
                             imageVector = Icons.Rounded.Explore,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = iconColor,
                         )
                     } else {
                         Text(
@@ -209,7 +218,7 @@ private fun TabRow(
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp,
                             ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = iconColor,
                         )
                     }
                 }

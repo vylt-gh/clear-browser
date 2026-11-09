@@ -109,4 +109,16 @@ class BrowserSettingsTest {
         val settings = BrowserSettings(onboardingCompleted = true)
         assertEquals(true, settings.onboardingCompleted)
     }
+
+    @Test
+    fun defaultCanopyDownloadsIsTrue() {
+        val settings = BrowserSettings()
+        assertEquals(true, settings.canopyDownloads)
+    }
+
+    @Test
+    fun customCanopyDownloadsIsRetained() {
+        val settings = BrowserSettings(canopyDownloads = false)
+        assertEquals(false, settings.canopyDownloads)
+    }
 }

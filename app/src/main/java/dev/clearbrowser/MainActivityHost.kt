@@ -1,15 +1,18 @@
 package dev.clearbrowser
 
+import android.Manifest
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.os.Environment
 import android.provider.Settings
 import android.webkit.CookieManager
 import android.webkit.MimeTypeMap
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -306,8 +309,19 @@ class MainActivityHost(private val activity: ComponentActivity) : BrowserHost {
                 ?.takeIf { it.isNotBlank() }
                 ?.let { spec.addRequestHeader("Cookie", it) }
 
-            manager.enqueue(spec)
-            Log.i("ClearBrowser", "download saved as $filename")
+            val downloadId = manager.enqueue(spec)
+            Log.i("ClearBrowser", "download saved as $filename (id=$downloadId)")
+
+            activity.runOnUiThread {
+                Toast.makeText(activity, activity.getString(R.string.download_started, filename), Toast.LENGTH_SHORT).show()
+            }
+            (activity as? MainActivity)?.downloads?.onDownloadEnqueued(downloadId, filename)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    activity.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1002)
+                }
+            }
         }.onFailure {
             Log.w("ClearBrowser", "Download failed to start: ${it.message}")
         }

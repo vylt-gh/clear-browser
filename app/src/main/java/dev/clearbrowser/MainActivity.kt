@@ -28,6 +28,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -62,7 +64,7 @@ class MainActivity : ComponentActivity() {
     private val faviconStore: dev.clearbrowser.core.data.FaviconStore
         get() = app.faviconStore
 
-    private val downloads: dev.clearbrowser.core.data.DownloadsStore by lazy {
+    internal val downloads: dev.clearbrowser.core.data.DownloadsStore by lazy {
         dev.clearbrowser.core.data.DownloadsStore(applicationContext)
     }
 
@@ -72,8 +74,19 @@ class MainActivity : ComponentActivity() {
 
     private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
-                vm?.refreshDownloads()
+            when (intent?.action) {
+                DownloadManager.ACTION_DOWNLOAD_COMPLETE -> {
+                    vm?.refreshDownloads()
+                }
+                dev.clearbrowser.core.data.DownloadNotificationManager.ACTION_CANCEL_DOWNLOAD -> {
+                    val id = intent.getLongExtra(dev.clearbrowser.core.data.DownloadNotificationManager.EXTRA_DOWNLOAD_ID, -1L)
+                    if (id != -1L) {
+                        lifecycleScope.launch {
+                            downloads.remove(id)
+                            Toast.makeText(this@MainActivity, R.string.download_cancelled, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             }
         }
     }
@@ -136,7 +149,10 @@ class MainActivity : ComponentActivity() {
         // system's contrast scrim would double up into a visible band.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        val filter = IntentFilter().apply {
+            addAction(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+            addAction(dev.clearbrowser.core.data.DownloadNotificationManager.ACTION_CANCEL_DOWNLOAD)
+        }
         ContextCompat.registerReceiver(
             this,
             downloadReceiver,
@@ -257,6 +273,25 @@ class MainActivity : ComponentActivity() {
             }
             command == "tabs" || action == "dev.clearbrowser.ACTION_TABS" -> {
                 viewModel.openTabs()
+            }
+            action == dev.clearbrowser.core.data.DownloadNotificationManager.ACTION_OPEN_DOWNLOAD -> {
+                val id = intent.getLongExtra(dev.clearbrowser.core.data.DownloadNotificationManager.EXTRA_DOWNLOAD_ID, -1L)
+                if (id != -1L) {
+                    val item = downloads.downloads.value.firstOrNull { it.id == id }
+                    if (item != null) {
+                        openDownload(item)
+                    } else {
+                        val uri = downloads.getUriForDownloadedFile(id)
+                        if (uri != null) {
+                            val mime = downloads.getMimeTypeForDownloadedFile(id) ?: "application/octet-stream"
+                            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, mime)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            runCatching { startActivity(Intent.createChooser(viewIntent, null)) }
+                        }
+                    }
+                }
             }
             command == "new_tab" || action == "dev.clearbrowser.ACTION_NEW_TAB" -> {
                 viewModel.newTab(intent.getStringExtra("url").orEmpty())
@@ -615,6 +650,7 @@ class MainActivity : ComponentActivity() {
             onAutoHideChange = settings::setAutoHideChrome,
             onHideHandleChange = settings::setHideHandle,
             onPullToRefreshChange = settings::setPullToRefresh,
+            onCanopyDownloadsChange = settings::setCanopyDownloads,
             onDynamicColorChange = settings::setDynamicColor,
             onImmersiveChange = { viewModel.setImmersive(it) },
             onIncognitoChange = viewModel::setIncognito,

@@ -143,6 +143,7 @@ class WebViewEngine(
      */
     private fun installDownloadListener() {
         webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            listener.onExternalDownloadStarted(url)
             host.startDownload(
                 DownloadRequest(
                     url = url,
