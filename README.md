@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=flat&logo=android&logoColor=white" alt="Platform: Android" />
-  <a href="https://github.com/vylt-gh/clear-browser/releases/latest"><img src="https://img.shields.io/badge/Release-v0.10.0-blue?style=flat&logo=github" alt="Release: v0.10.0" /></a>
+  <a href="https://github.com/vylt-gh/clear-browser/releases/latest"><img src="https://img.shields.io/badge/Release-v0.11.0-blue?style=flat&logo=github" alt="Release: v0.11.0" /></a>
   <img src="https://img.shields.io/badge/Engine-Mozilla%20GeckoView-FF7139?style=flat&logo=firefox&logoColor=white" alt="Engine: Mozilla GeckoView" />
   <img src="https://img.shields.io/badge/Adblock-uBlock%20Origin%20MV2-800000?style=flat" alt="uBlock Origin MV2" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
@@ -55,6 +55,7 @@ Built with Kotlin and Jetpack Compose and powered by Mozilla GeckoView, Clear pr
 - **Content-First Interface**: When you scroll down to read, the navigation bar morphs into a subtle corner handle—or vanishes completely when "Hide minimized button while reading" is enabled.
 - **Instant Controls**: Tapping the handle, scrolling upward, or using the back gesture brings back full navigation controls immediately.
 - **Adaptive Top Bar**: The Android status bar automatically samples and adopts the website's dominant header color for an unbroken, edge-to-edge feel.
+- **Live Download Notifications & Canopy Progress**: Real-time progress bar, byte counts, and cancel action right from your notification shade—with an optional slim progress bar running across the top canopy edge while browsing.
 - **Find in Page**: Real-time in-page search with match counter (`X of Y`), next/prev controls, and full multi-highlighting.
 
 ### 🔒 100% Local & Zero Telemetry
@@ -64,7 +65,8 @@ Built with Kotlin and Jetpack Compose and powered by Mozilla GeckoView, Clear pr
 - **Hard Private Mode**: Ephemeral in-memory sessions that leave zero trace on disk and reset on exit.
 
 ### 🚀 Seamless First-Run Walkthrough
-- **3-Step Setup Tour**: Choose your search engine (Kagi, DuckDuckGo, Brave, Google, etc.), tailor your interface, and import data in seconds.
+- **4-Step Setup Tour**: Choose your search engine (Kagi, DuckDuckGo, Brave, Google, etc.), tailor your interface, grant permissions with one tap, and import data in seconds.
+- **App Permissions Setup**: Dedicated permissions screen for download notifications, camera, microphone, and location with one-tap "Grant all" and transparent privacy disclosures.
 - **Live Interactive Bar Preview**: Test drive the selected Chrome Theme (`Clear`, `Acrylic`, `Material`), App Theme, and docked position with a tap-to-minimize simulation.
 - **One-Tap Default Browser Setup**: Directly trigger Android's native default browser selection prompt (`RoleManager`) with instant checkmark confirmation.
 - **HTML Bookmark Import**: Easily bring your existing bookmarks over from Chrome, Firefox, Safari, or desktop browsers via standard HTML bookmark files.
@@ -96,7 +98,7 @@ Grab the latest APK release from the [Releases page](https://github.com/vylt-gh/
 git clone https://github.com/vylt-gh/clear-browser.git
 cd clear-browser
 
-# Run unit tests (128 passing tests across 18 test suites)
+# Run unit tests (134 passing tests across 19 test suites)
 ./gradlew testDebugUnitTest
 
 # Build debug APK
