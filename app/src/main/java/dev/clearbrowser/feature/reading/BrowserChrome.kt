@@ -766,17 +766,17 @@ internal fun rememberFrostedGlassBrushes(isDark: Boolean, hasBackdrop: Boolean =
             if (isDark) {
                 Brush.verticalGradient(
                     listOf(
-                        Color(0x99272938), // Translucent acrylic top highlight
-                        Color(0x771A1C29), // Translucent body
-                        Color(0x6612131F), // Deeper base
+                        Color(0x88272938), // Translucent acrylic top highlight
+                        Color(0x661A1C29), // Translucent body
+                        Color(0x5512131F), // Deeper base
                     )
                 )
             } else {
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xAAFFFFFF), // Bright specular white catch
-                        Color(0x88F0F4FA), // Frosted translucent body
-                        Color(0x77DFE5F0), // Cool tinted base
+                        Color(0x99FFFFFF), // Bright specular white catch
+                        Color(0x77F0F4FA), // Frosted translucent body
+                        Color(0x66DFE5F0), // Cool tinted base
                     )
                 )
             }
