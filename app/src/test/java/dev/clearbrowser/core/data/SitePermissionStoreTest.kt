@@ -28,5 +28,11 @@ class SitePermissionStoreTest {
 
         assertFalse(store.hasPermission("github.com", "Notifications"))
         assertFalse(store.hasPermission("other.com", "Location"))
+
+        store.recordPermission("webxr.io", "Virtual & Augmented Reality (XR)")
+        assertTrue(store.hasPermission("webxr.io", "Virtual & Augmented Reality (XR)"))
+
+        store.recordPermission("media.net", "Autoplay media")
+        assertTrue(store.hasPermission("media.net", "Autoplay media"))
     }
 }

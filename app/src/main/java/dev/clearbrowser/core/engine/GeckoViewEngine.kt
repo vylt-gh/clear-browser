@@ -397,19 +397,35 @@ class GeckoViewEngine(
                     GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "location"
                     GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> "notifications"
                     GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE -> "storage"
+                    GeckoSession.PermissionDelegate.PERMISSION_XR -> "xr"
+                    GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_AUDIBLE,
+                    GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_INAUDIBLE -> "autoplay"
+                    GeckoSession.PermissionDelegate.PERMISSION_MEDIA_KEY_SYSTEM_ACCESS -> "protected_media"
+                    GeckoSession.PermissionDelegate.PERMISSION_STORAGE_ACCESS -> "storage_access"
+                    GeckoSession.PermissionDelegate.PERMISSION_LOCAL_DEVICE_ACCESS,
+                    GeckoSession.PermissionDelegate.PERMISSION_LOCAL_NETWORK_ACCESS -> "local_devices"
                     else -> "features"
                 }
                 val permTypeStr = when (perm.permission) {
                     GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> context.getString(R.string.permission_location)
                     GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> context.getString(R.string.permission_notifications)
                     GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE -> context.getString(R.string.permission_storage)
-                    else -> "features"
+                    GeckoSession.PermissionDelegate.PERMISSION_XR -> context.getString(R.string.permission_xr)
+                    GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_AUDIBLE,
+                    GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_INAUDIBLE -> context.getString(R.string.permission_autoplay)
+                    GeckoSession.PermissionDelegate.PERMISSION_MEDIA_KEY_SYSTEM_ACCESS -> context.getString(R.string.permission_protected_media)
+                    GeckoSession.PermissionDelegate.PERMISSION_STORAGE_ACCESS -> context.getString(R.string.permission_storage_access)
+                    GeckoSession.PermissionDelegate.PERMISSION_LOCAL_DEVICE_ACCESS,
+                    GeckoSession.PermissionDelegate.PERMISSION_LOCAL_NETWORK_ACCESS -> context.getString(R.string.permission_local_devices)
+                    else -> context.getString(R.string.permission_features)
                 }
 
                 val permStore = dev.clearbrowser.core.data.SitePermissionStore.forContext(context)
                 val settings = dev.clearbrowser.core.data.SettingsStore(context).state.value
 
-                val autoAccept = settings.autoAcceptPermissions.contains(permCategoryKey)
+                val autoAccept = settings.autoAcceptAllPermissions ||
+                    settings.autoAcceptPermissions.contains(permCategoryKey) ||
+                    settings.autoAcceptPermissions.contains("features")
                 val alreadyGranted = permStore.hasPermission(hostName, permTypeStr)
 
                 if (autoAccept || alreadyGranted) {
@@ -462,7 +478,7 @@ class GeckoViewEngine(
                 val permStore = dev.clearbrowser.core.data.SitePermissionStore.forContext(context)
                 val settings = dev.clearbrowser.core.data.SettingsStore(context).state.value
 
-                val autoAccept = settings.autoAcceptPermissions.contains("media")
+                val autoAccept = settings.autoAcceptAllPermissions || settings.autoAcceptPermissions.contains("media")
                 val alreadyGranted = permStore.hasPermission(hostName, deviceStr)
 
                 if (autoAccept || alreadyGranted) {

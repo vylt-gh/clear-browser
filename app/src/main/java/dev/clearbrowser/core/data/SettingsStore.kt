@@ -98,6 +98,9 @@ data class BrowserSettings(
     /** Text scaling zoom percentage (e.g. 80, 100, 125, 150). */
     val textZoom: Int = 100,
 
+    /** Horizontal placement ratio of the minimized handle (0f = far left, 1f = far right). */
+    val handlePositionRatio: Float = 0.5f,
+
     /** Visual styling theme for the browser chrome (Clear, Acrylic, Material). */
     val chromeTheme: ChromeTheme = ChromeTheme.CLEAR,
 
@@ -113,7 +116,10 @@ data class BrowserSettings(
     /** Disable auto-hiding chrome on scroll; hide via long-press on address bar or menu. */
     val hideChromeOnPress: Boolean = false,
 
-    /** Set of permission category keys ("location", "notifications", "storage", "media") to automatically accept. */
+    /** Whether to auto-accept all site permission requests without prompting. */
+    val autoAcceptAllPermissions: Boolean = false,
+
+    /** Set of permission category keys ("location", "notifications", "storage", "media", "features", etc.) to automatically accept. */
     val autoAcceptPermissions: Set<String> = emptySet(),
 
     /** Whether the first-launch onboarding walkthrough has been completed or dismissed. */
@@ -142,7 +148,17 @@ class SettingsStore(context: Context) {
     fun setChromeLayout(layout: ChromeLayout) = update { it.copy(chromeLayout = layout) }
 
     fun setChromePosition(position: ChromePosition) =
-        update { it.copy(chromePosition = position) }
+        update {
+            val ratio = when (position) {
+                ChromePosition.LEFT -> 0f
+                ChromePosition.CENTER -> 0.5f
+                ChromePosition.RIGHT -> 1f
+            }
+            it.copy(chromePosition = position, handlePositionRatio = ratio)
+        }
+
+    fun setHandlePositionRatio(ratio: Float) =
+        update { it.copy(handlePositionRatio = ratio.coerceIn(0f, 1f)) }
 
     fun setDynamicColor(enabled: Boolean) = update { it.copy(dynamicColor = enabled) }
 
@@ -163,6 +179,8 @@ class SettingsStore(context: Context) {
     fun setCanopyDownloads(enabled: Boolean) = update { it.copy(canopyDownloads = enabled) }
 
     fun setHideChromeOnPress(enabled: Boolean) = update { it.copy(hideChromeOnPress = enabled) }
+
+    fun setAutoAcceptAllPermissions(enabled: Boolean) = update { it.copy(autoAcceptAllPermissions = enabled) }
 
     fun setAutoAcceptPermissions(permissions: Set<String>) = update { it.copy(autoAcceptPermissions = permissions) }
 
@@ -186,6 +204,7 @@ class SettingsStore(context: Context) {
             .putBoolean(KEY_IMMERSIVE, next.immersiveMode)
             .putString(KEY_LAYOUT, next.chromeLayout.name)
             .putString(KEY_POSITION, next.chromePosition.name)
+            .putFloat(KEY_HANDLE_POSITION_RATIO, next.handlePositionRatio)
             .putBoolean(KEY_DYNAMIC, next.dynamicColor)
             .putString(KEY_SEARCH_ENGINE, next.searchEngine.name)
             .putString(KEY_APP_THEME, next.appTheme.name)
@@ -196,6 +215,7 @@ class SettingsStore(context: Context) {
             .putBoolean(KEY_PULL_TO_REFRESH, next.pullToRefresh)
             .putBoolean(KEY_CANOPY_DOWNLOADS, next.canopyDownloads)
             .putBoolean(KEY_HIDE_CHROME_ON_PRESS, next.hideChromeOnPress)
+            .putBoolean(KEY_AUTO_ACCEPT_ALL_PERMISSIONS, next.autoAcceptAllPermissions)
             .putStringSet(KEY_AUTO_ACCEPT_PERMISSIONS, next.autoAcceptPermissions)
             .putBoolean(KEY_ONBOARDING_COMPLETED, next.onboardingCompleted)
             .apply()
@@ -210,6 +230,7 @@ class SettingsStore(context: Context) {
         chromePosition = prefs.getString(KEY_POSITION, null)
             ?.let { runCatching { ChromePosition.valueOf(it) }.getOrNull() }
             ?: ChromePosition.CENTER,
+        handlePositionRatio = prefs.getFloat(KEY_HANDLE_POSITION_RATIO, 0.5f).coerceIn(0f, 1f),
         dynamicColor = prefs.getBoolean(KEY_DYNAMIC, true),
         searchEngine = prefs.getString(KEY_SEARCH_ENGINE, null)
             ?.let { runCatching { SearchEngine.valueOf(it) }.getOrNull() }
@@ -228,6 +249,7 @@ class SettingsStore(context: Context) {
         pullToRefresh = prefs.getBoolean(KEY_PULL_TO_REFRESH, true),
         canopyDownloads = prefs.getBoolean(KEY_CANOPY_DOWNLOADS, true),
         hideChromeOnPress = prefs.getBoolean(KEY_HIDE_CHROME_ON_PRESS, false),
+        autoAcceptAllPermissions = prefs.getBoolean(KEY_AUTO_ACCEPT_ALL_PERMISSIONS, false),
         autoAcceptPermissions = prefs.getStringSet(KEY_AUTO_ACCEPT_PERMISSIONS, emptySet())?.toSet() ?: emptySet(),
         onboardingCompleted = prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false),
     )
@@ -237,6 +259,7 @@ class SettingsStore(context: Context) {
         const val KEY_IMMERSIVE = "immersive"
         const val KEY_LAYOUT = "chrome_layout"
         const val KEY_POSITION = "chrome_position"
+        const val KEY_HANDLE_POSITION_RATIO = "handle_position_ratio"
         const val KEY_DYNAMIC = "dynamic_color"
         const val KEY_SEARCH_ENGINE = "search_engine"
         const val KEY_APP_THEME = "app_theme"
@@ -247,6 +270,7 @@ class SettingsStore(context: Context) {
         const val KEY_PULL_TO_REFRESH = "pull_to_refresh"
         const val KEY_CANOPY_DOWNLOADS = "canopy_downloads"
         const val KEY_HIDE_CHROME_ON_PRESS = "hide_chrome_on_press"
+        const val KEY_AUTO_ACCEPT_ALL_PERMISSIONS = "auto_accept_all_permissions"
         const val KEY_AUTO_ACCEPT_PERMISSIONS = "auto_accept_permissions"
         const val KEY_ORIGINAL_M3_CHROME = "original_material3_chrome"
         const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"

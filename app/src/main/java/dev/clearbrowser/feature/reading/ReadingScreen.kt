@@ -148,6 +148,8 @@ fun ReadingScreen(
     onPullToRefreshChange: (Boolean) -> Unit = {},
     onCanopyDownloadsChange: (Boolean) -> Unit = {},
     onHideChromeOnPressChange: (Boolean) -> Unit = {},
+    onHandlePositionRatioChange: (Float) -> Unit = {},
+    onAutoAcceptAllPermissionsChange: (Boolean) -> Unit = {},
     onToggleAutoAcceptPermission: (String, Boolean) -> Unit = { _, _ -> },
     onSharePage: () -> Unit = {},
     onCopyLink: () -> Unit = {},
@@ -448,6 +450,7 @@ fun ReadingScreen(
                     onSettings = onOpenSettings,
                     onToggleBookmark = onToggleBookmark,
                     onToggleChrome = onToggleChrome,
+                    onHandlePositionRatioChange = onHandlePositionRatioChange,
                     // The bottom edge is the whole design: the thumb should not have
                     // to reach past the content to find the controls.
                     modifier = Modifier.align(Alignment.BottomCenter),
@@ -519,6 +522,7 @@ fun ReadingScreen(
                     sitePermissions = sitePermissions,
                     onRevokeSitePermission = onRevokeSitePermission,
                     onClearAllSitePermissions = onClearAllSitePermissions,
+                    onAutoAcceptAllPermissionsChange = onAutoAcceptAllPermissionsChange,
                     onToggleAutoAcceptPermission = onToggleAutoAcceptPermission,
                     isDefaultBrowser = isDefaultBrowser,
                     onRequestDefaultBrowser = onRequestDefaultBrowser,

@@ -409,6 +409,10 @@ class MainActivity : ComponentActivity() {
                 }
                 settings.setChromePosition(pos)
             }
+            command == "handle_ratio" || action == "dev.clearbrowser.ACTION_SET_HANDLE_RATIO" -> {
+                val ratio = intent.getFloatExtra("ratio", 0.5f)
+                settings.setHandlePositionRatio(ratio)
+            }
             command == "hide_handle" || action == "dev.clearbrowser.ACTION_HIDE_HANDLE" -> {
                 val enabled = intent.getBooleanExtra("enabled", true)
                 settings.setHideHandle(enabled)
@@ -701,12 +705,14 @@ class MainActivity : ComponentActivity() {
             onCloseLibrary = viewModel::closeLibrary,
             onDesktopSiteChange = viewModel::setDesktopSite,
             onChromePositionChange = settings::setChromePosition,
+            onHandlePositionRatioChange = settings::setHandlePositionRatio,
             onSearchEngineChange = settings::setSearchEngine,
             onAutoHideChange = settings::setAutoHideChrome,
             onHideHandleChange = settings::setHideHandle,
             onHideChromeOnPressChange = settings::setHideChromeOnPress,
             onPullToRefreshChange = settings::setPullToRefresh,
             onCanopyDownloadsChange = settings::setCanopyDownloads,
+            onAutoAcceptAllPermissionsChange = settings::setAutoAcceptAllPermissions,
             onToggleAutoAcceptPermission = settings::setAutoAcceptPermission,
             onDynamicColorChange = settings::setDynamicColor,
             onImmersiveChange = { viewModel.setImmersive(it) },

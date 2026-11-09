@@ -1,12 +1,16 @@
 package dev.clearbrowser.feature.reading
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,6 +49,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -77,7 +83,7 @@ fun SettingsSheet(
     state: ReadingUiState,
     desktopSiteEnabled: Boolean,
     onDismiss: () -> Unit,
-    onChromePositionChange: (ChromePosition) -> Unit,
+    onChromePositionChange: (ChromePosition) -> Unit = {},
     onSearchEngineChange: (SearchEngine) -> Unit,
     onAutoHideChange: (Boolean) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
@@ -96,6 +102,7 @@ fun SettingsSheet(
     sitePermissions: List<dev.clearbrowser.core.data.SitePermission> = emptyList(),
     onRevokeSitePermission: (String, String) -> Unit = { _, _ -> },
     onClearAllSitePermissions: () -> Unit = {},
+    onAutoAcceptAllPermissionsChange: (Boolean) -> Unit = {},
     onToggleAutoAcceptPermission: (String, Boolean) -> Unit = { _, _ -> },
     isDefaultBrowser: Boolean = false,
     onRequestDefaultBrowser: () -> Unit = {},
@@ -155,13 +162,6 @@ fun SettingsSheet(
             SearchEngineControl(
                 selected = settings.searchEngine,
                 onSelect = onSearchEngineChange,
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-            ChromePositionControl(
-                selected = settings.chromePosition,
-                onSelect = onChromePositionChange,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -290,53 +290,108 @@ fun SettingsSheet(
             },
             text = {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_site_permissions_auto_accept_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_site_permissions_auto_accept_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    val autoPerms = settings.autoAcceptPermissions
-                    val permOptions = listOf(
-                        "location" to stringResource(R.string.onboarding_permission_location_title),
-                        "notifications" to stringResource(R.string.onboarding_permission_notifications_title),
-                        "storage" to stringResource(R.string.permission_storage),
-                        "media" to stringResource(R.string.permission_camera_microphone),
-                    )
-
-                    permOptions.forEach { (key, label) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    onToggleAutoAcceptPermission(key, !autoPerms.contains(key))
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
+                    // Auto-accept all switch
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                onAutoAcceptAllPermissionsChange(!settings.autoAcceptAllPermissions)
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
-                                text = label,
+                                text = stringResource(R.string.settings_site_permissions_auto_accept_all),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
-                            Switch(
-                                checked = autoPerms.contains(key),
-                                onCheckedChange = { checked ->
-                                    onToggleAutoAcceptPermission(key, checked)
-                                },
+                            Text(
+                                text = stringResource(R.string.settings_site_permissions_auto_accept_all_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        }
+                        Switch(
+                            checked = settings.autoAcceptAllPermissions,
+                            onCheckedChange = onAutoAcceptAllPermissionsChange,
+                        )
+                    }
+
+                    // Checkbox list for specific permissions when auto-accept all is OFF
+                    AnimatedVisibility(visible = !settings.autoAcceptAllPermissions) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = stringResource(R.string.settings_site_permissions_specific_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 6.dp),
+                            )
+
+                            val autoPerms = settings.autoAcceptPermissions
+                            val permOptions = listOf(
+                                "location" to stringResource(R.string.permission_location_label),
+                                "notifications" to stringResource(R.string.permission_notifications_label),
+                                "media" to stringResource(R.string.permission_camera_microphone_label),
+                                "storage" to stringResource(R.string.permission_storage_label),
+                                "features" to stringResource(R.string.permission_features_label),
+                                "xr" to stringResource(R.string.permission_xr_label),
+                                "autoplay" to stringResource(R.string.permission_autoplay_label),
+                                "protected_media" to stringResource(R.string.permission_protected_media_label),
+                                "storage_access" to stringResource(R.string.permission_storage_access_label),
+                                "local_devices" to stringResource(R.string.permission_local_devices_label),
+                            )
+
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 180.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                                ) {
+                                    permOptions.forEach { (key, label) ->
+                                        val checked = autoPerms.contains(key)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .clickable {
+                                                    onToggleAutoAcceptPermission(key, !checked)
+                                                }
+                                                .padding(horizontal = 6.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Checkbox(
+                                                checked = checked,
+                                                onCheckedChange = { isChecked ->
+                                                    onToggleAutoAcceptPermission(key, isChecked)
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -355,35 +410,55 @@ fun SettingsSheet(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     } else {
-                        sitePermissions.forEach { perm ->
-                            Row(
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 180.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        ) {
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = perm.origin,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    Text(
-                                        text = perm.permissionType,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                TextButton(
-                                    onClick = {
-                                        onRevokeSitePermission(perm.origin, perm.permissionType)
-                                    },
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.settings_site_permissions_revoke),
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
+                                sitePermissions.forEach { perm ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                            Text(
+                                                text = perm.origin,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Text(
+                                                text = perm.permissionType,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                onRevokeSitePermission(perm.origin, perm.permissionType)
+                                            },
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.settings_site_permissions_revoke),
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -577,67 +652,7 @@ private fun SearchEngineControl(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ChromePositionControl(
-    selected: ChromePosition,
-    onSelect: (ChromePosition) -> Unit,
-) {
-    Column(modifier = Modifier.padding(top = 8.dp)) {
-        Text(
-            text = stringResource(R.string.menu_chrome_position),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = stringResource(R.string.menu_chrome_position_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp),
-        ) {
-            ChromePosition.entries.forEachIndexed { index, position ->
-                SegmentedButton(
-                    selected = selected == position,
-                    onClick = { onSelect(position) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = ChromePosition.entries.size,
-                    ),
-                    icon = {},
-                    label = {
-                        Icon(
-                            imageVector = when (position) {
-                                ChromePosition.LEFT -> positionIconLeft
-                                ChromePosition.CENTER -> positionIconCenter
-                                ChromePosition.RIGHT -> positionIconRight
-                            },
-                            contentDescription = stringResource(position.labelRes()),
-                            modifier = Modifier.size(20.dp),
-                        )
-                    },
-                )
-            }
-        }
-    }
-}
 
-private fun ChromePosition.labelRes(): Int = when (this) {
-    ChromePosition.CENTER -> R.string.chrome_position_center
-    ChromePosition.LEFT -> R.string.chrome_position_left
-    ChromePosition.RIGHT -> R.string.chrome_position_right
-}
-
-private val positionIconLeft: ImageVector =
-    Icons.AutoMirrored.Rounded.AlignHorizontalLeft
-
-private val positionIconCenter: ImageVector = Icons.Rounded.AlignHorizontalCenter
-
-private val positionIconRight: ImageVector =
-    Icons.AutoMirrored.Rounded.AlignHorizontalRight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

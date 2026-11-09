@@ -44,6 +44,8 @@ data class ReadingUiState(
     val canGoBack: Boolean = false,
     val canGoForward: Boolean = false,
     val chromeMode: ChromeMode = ChromeMode.SUMMONED,
+    /** True if chrome was hidden manually via button/press, overriding hideHandle until restored. */
+    val temporaryHandle: Boolean = false,
     val settings: BrowserSettings = BrowserSettings(),
     /** A JS alert/confirm/prompt awaiting an answer. Never left dangling. */
     val jsDialog: dev.clearbrowser.core.engine.JsDialog? = null,
@@ -867,13 +869,25 @@ class ReadingViewModel(
 
     fun toggleChrome() {
         val mode = _state.value.chromeMode
+        if (mode.isChromeVisible) {
+            hideChromeManually()
+        } else {
+            revealChrome()
+        }
+    }
+
+    fun hideChromeManually() {
         _state.value = _state.value.copy(
-            chromeMode = if (mode.isChromeVisible) ChromeMode.READING else ChromeMode.SUMMONED,
+            chromeMode = ChromeMode.READING,
+            temporaryHandle = true,
         )
     }
 
     fun expandOmnibox() {
-        _state.value = _state.value.copy(chromeMode = ChromeMode.EXPANDED)
+        _state.value = _state.value.copy(
+            chromeMode = ChromeMode.EXPANDED,
+            temporaryHandle = false,
+        )
         val initialQuery = if (_state.value.isStartPage) "" else _state.value.url
         onOmniboxQueryChanged(initialQuery)
     }
@@ -882,6 +896,7 @@ class ReadingViewModel(
         suggestionsJob?.cancel()
         _state.value = _state.value.copy(
             chromeMode = ChromeMode.SUMMONED,
+            temporaryHandle = false,
             searchSuggestions = emptyList(),
         )
     }
@@ -1571,12 +1586,18 @@ class ReadingViewModel(
         if (_state.value.libraryTab != null) return
         // Do not hide chrome while reading at or near the top of the page.
         if (_state.value.scrollAtTop) return
-        _state.value = _state.value.copy(chromeMode = ChromeMode.READING)
+        _state.value = _state.value.copy(
+            chromeMode = ChromeMode.READING,
+            temporaryHandle = false,
+        )
     }
 
-    private fun revealChrome() {
-        if (_state.value.chromeMode == ChromeMode.READING) {
-            _state.value = _state.value.copy(chromeMode = ChromeMode.SUMMONED)
+    fun revealChrome() {
+        if (_state.value.chromeMode == ChromeMode.READING || _state.value.temporaryHandle) {
+            _state.value = _state.value.copy(
+                chromeMode = ChromeMode.SUMMONED,
+                temporaryHandle = false,
+            )
         }
     }
 

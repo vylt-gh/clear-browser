@@ -146,4 +146,28 @@ class BrowserSettingsTest {
         val settings = BrowserSettings(autoAcceptPermissions = perms)
         assertEquals(perms, settings.autoAcceptPermissions)
     }
+
+    @Test
+    fun defaultHandlePositionRatioIsHalf() {
+        val settings = BrowserSettings()
+        assertEquals(0.5f, settings.handlePositionRatio, 0.001f)
+    }
+
+    @Test
+    fun customHandlePositionRatioIsRetained() {
+        val settings = BrowserSettings(handlePositionRatio = 0.8f)
+        assertEquals(0.8f, settings.handlePositionRatio, 0.001f)
+    }
+
+    @Test
+    fun defaultAutoAcceptAllPermissionsIsFalse() {
+        val settings = BrowserSettings()
+        assertEquals(false, settings.autoAcceptAllPermissions)
+    }
+
+    @Test
+    fun customAutoAcceptAllPermissionsIsRetained() {
+        val settings = BrowserSettings(autoAcceptAllPermissions = true)
+        assertEquals(true, settings.autoAcceptAllPermissions)
+    }
 }

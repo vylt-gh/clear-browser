@@ -47,6 +47,7 @@ import androidx.compose.material.icons.rounded.AlignHorizontalCenter
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LightMode
@@ -119,7 +120,7 @@ fun OnboardingScreen(
     importedBookmarksCount: Int?,
     onSearchEngineChange: (SearchEngine) -> Unit,
     onAppThemeChange: (AppTheme) -> Unit,
-    onChromePositionChange: (ChromePosition) -> Unit,
+    onChromePositionChange: (ChromePosition) -> Unit = {},
     onChromeThemeChange: (ChromeTheme) -> Unit,
     onHideHandleChange: (Boolean) -> Unit = {},
     onRequestDefaultBrowser: () -> Unit,
@@ -207,8 +208,6 @@ fun OnboardingScreen(
                         onAppThemeChange = onAppThemeChange,
                         chromeTheme = settings.chromeTheme,
                         onChromeThemeChange = onChromeThemeChange,
-                        chromePosition = settings.chromePosition,
-                        onChromePositionChange = onChromePositionChange,
                         hideHandle = settings.hideHandle,
                         onHideHandleChange = onHideHandleChange,
                     )
@@ -391,8 +390,6 @@ private fun AppearancePage(
     onAppThemeChange: (AppTheme) -> Unit,
     chromeTheme: ChromeTheme,
     onChromeThemeChange: (ChromeTheme) -> Unit,
-    chromePosition: ChromePosition,
-    onChromePositionChange: (ChromePosition) -> Unit,
     hideHandle: Boolean,
     onHideHandleChange: (Boolean) -> Unit,
 ) {
@@ -504,44 +501,32 @@ private fun AppearancePage(
         DummyChromePreview(
             chromeTheme = chromeTheme,
             appTheme = appTheme,
-            chromePosition = chromePosition,
             hideHandle = hideHandle,
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 18.dp))
 
-        // 4. Minimized Bar Position (formerly Handle Position)
-        Text(
-            text = stringResource(R.string.menu_chrome_position),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = stringResource(R.string.menu_chrome_position_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 10.dp),
-        )
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            ChromePosition.entries.forEachIndexed { index, pos ->
-                SegmentedButton(
-                    selected = chromePosition == pos,
-                    onClick = { onChromePositionChange(pos) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = ChromePosition.entries.size),
-                    icon = {},
-                    label = {
-                        Icon(
-                            imageVector = when (pos) {
-                                ChromePosition.LEFT -> Icons.AutoMirrored.Rounded.AlignHorizontalLeft
-                                ChromePosition.CENTER -> Icons.Rounded.AlignHorizontalCenter
-                                ChromePosition.RIGHT -> Icons.AutoMirrored.Rounded.AlignHorizontalRight
-                            },
-                            contentDescription = pos.name,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    },
-                )
-            }
+        // 4. Draggable handle tip
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.DragHandle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+            Text(
+                text = stringResource(R.string.onboarding_draggable_handle_tip),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -583,7 +568,6 @@ private fun AppearancePage(
 private fun DummyChromePreview(
     chromeTheme: ChromeTheme,
     appTheme: AppTheme,
-    chromePosition: ChromePosition,
     hideHandle: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -676,11 +660,7 @@ private fun DummyChromePreview(
             val handleSize = 44.dp
             val expandedWidth = available
 
-            val handleOffset: Dp = when (chromePosition) {
-                ChromePosition.LEFT -> 0.dp
-                ChromePosition.CENTER -> (available - handleSize) / 2f
-                ChromePosition.RIGHT -> available - handleSize
-            }
+            val handleOffset: Dp = (available - handleSize) / 2f
 
             val animatedHandleOffset by animateDpAsState(
                 targetValue = handleOffset,
@@ -772,11 +752,7 @@ private fun DummyChromePreview(
             ) {
                 Row(
                     modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = when (chromePosition) {
-                        ChromePosition.RIGHT -> Arrangement.End
-                        ChromePosition.CENTER -> Arrangement.Center
-                        ChromePosition.LEFT -> Arrangement.Start
-                    },
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (progress > 0.5f) {

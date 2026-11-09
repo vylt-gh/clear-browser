@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -185,7 +186,7 @@ fun ChromePopupMenu(
 
     Surface(
         modifier = modifier
-            .width(215.dp)
+            .width(240.dp)
             .shadow(
                 elevation = elevation,
                 shape = shape,
@@ -337,6 +338,8 @@ private fun PopupMenuItem(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         trailing?.invoke()

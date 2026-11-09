@@ -14,6 +14,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +56,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -158,11 +162,12 @@ fun ChromeSurface(
     onSettings: () -> Unit = {},
     onToggleBookmark: () -> Unit = {},
     onToggleChrome: () -> Unit = {},
+    onHandlePositionRatioChange: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val collapsed = state.chromeMode == ChromeMode.READING
     val expanded = state.chromeMode == ChromeMode.EXPANDED
-    val position = state.settings.chromePosition
+    val shouldHideHandle = state.settings.hideHandle && !state.temporaryHandle
 
     val initialText = remember(state.url, state.chromeMode) {
         if (state.isStartPage) "" else state.url
@@ -184,12 +189,10 @@ fun ChromeSurface(
     val density = LocalDensity.current
     val bounds = remember { android.graphics.RectF() }
 
-    val hideHandle = state.settings.hideHandle
-
     // Track the animated width, not the target: the page should not be able to
     // be tapped through a bar that is on its way somewhere.
-    LaunchedEffect(progress, hideHandle) {
-        if (progress <= 0.01f && hideHandle) onBoundsChanged(null)
+    LaunchedEffect(progress, shouldHideHandle) {
+        if (progress <= 0.01f && shouldHideHandle) onBoundsChanged(null)
     }
 
     BoxWithConstraints(
@@ -203,20 +206,28 @@ fun ChromeSurface(
         val handleWidth = HANDLE_SIZE
         val expandedWidth = available
 
+        val maxOffsetDp = (available - handleWidth).coerceAtLeast(0.dp)
+        val maxOffsetPx = with(density) { maxOffsetDp.toPx() }
+
+        var dragOffsetPx by remember { mutableFloatStateOf(0f) }
+        val baseRatio = state.settings.handlePositionRatio.coerceIn(0f, 1f)
+        val baseOffsetPx = maxOffsetPx * baseRatio
+        val currentHandleOffsetPx = (baseOffsetPx + dragOffsetPx).coerceIn(0f, maxOffsetPx)
+
         // Where the handle sits, in the same coordinate space as the bar.
-        val handleOffset: Dp = when (position) {
-            ChromePosition.LEFT -> 0.dp
-            ChromePosition.CENTER -> (available - handleWidth) / 2f
-            ChromePosition.RIGHT -> available - handleWidth
+        // If user wants no handle, it always disappears to the center middle.
+        val targetHandleOffset: Dp = if (shouldHideHandle) {
+            maxOffsetDp / 2f
+        } else {
+            with(density) { currentHandleOffsetPx.toDp() }
         }
 
         val currentWidth = lerpDp(handleWidth, expandedWidth, progress)
-        val currentOffset = lerpDp(handleOffset, 0.dp, progress)
+        val currentOffset = lerpDp(targetHandleOffset, 0.dp, progress)
 
         val isDark = resolveIsDark(state.settings.appTheme, isSystemInDarkTheme())
         val chromeTheme = state.settings.chromeTheme
-        val hideHandle = state.settings.hideHandle
-        val hideOffsetY = if (hideHandle) lerpDp(HANDLE_SIZE + HANDLE_MARGIN * 3, 0.dp, progress) else 0.dp
+        val hideOffsetY = if (shouldHideHandle) lerpDp(HANDLE_SIZE + HANDLE_MARGIN * 3, 0.dp, progress) else 0.dp
         val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
 
         val colorScheme = MaterialTheme.colorScheme
@@ -273,7 +284,7 @@ fun ChromeSurface(
                         .graphicsLayer {
                             translationX = currentOffset.toPx()
                             translationY = hideOffsetY.toPx()
-                            if (hideHandle) {
+                            if (shouldHideHandle) {
                                 alpha = (progress * 2f).coerceIn(0f, 1f)
                             }
                         }
@@ -294,7 +305,7 @@ fun ChromeSurface(
                         .graphicsLayer {
                             translationX = currentOffset.toPx()
                             translationY = hideOffsetY.toPx()
-                            if (hideHandle) {
+                            if (shouldHideHandle) {
                                 alpha = (progress * 2f).coerceIn(0f, 1f)
                             }
                         }
@@ -313,7 +324,7 @@ fun ChromeSurface(
                         .graphicsLayer {
                             translationX = currentOffset.toPx()
                             translationY = hideOffsetY.toPx()
-                            if (hideHandle) {
+                            if (shouldHideHandle) {
                                 alpha = (progress * 2f).coerceIn(0f, 1f)
                             }
                         }
@@ -326,6 +337,7 @@ fun ChromeSurface(
                 }
             }
 
+            val currentRatio = if (maxOffsetPx > 0f) currentHandleOffsetPx / maxOffsetPx else 0.5f
             Row(
                 modifier = chromeBarModifier
                     .onGloballyPositioned { coords ->
@@ -333,10 +345,11 @@ fun ChromeSurface(
                         bounds.set(window.left, window.top, window.right, window.bottom)
                         onBoundsChanged(bounds)
                     },
-                horizontalArrangement = when (position) {
-                    ChromePosition.RIGHT -> Arrangement.End
-                    ChromePosition.CENTER -> Arrangement.Center
-                    ChromePosition.LEFT -> Arrangement.Start
+                horizontalArrangement = when {
+                    shouldHideHandle -> Arrangement.Center
+                    currentRatio < 0.33f -> Arrangement.Start
+                    currentRatio > 0.67f -> Arrangement.End
+                    else -> Arrangement.Center
                 },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -380,6 +393,18 @@ fun ChromeSurface(
                         modifier = Modifier
                             .size(HANDLE_SIZE)
                             .graphicsLayer { alpha = (1f - progress * 2f).coerceIn(0f, 1f) }
+                            .draggable(
+                                orientation = Orientation.Horizontal,
+                                state = rememberDraggableState { delta ->
+                                    dragOffsetPx += delta
+                                },
+                                onDragStopped = {
+                                    val finalOffsetPx = (baseOffsetPx + dragOffsetPx).coerceIn(0f, maxOffsetPx)
+                                    val newRatio = if (maxOffsetPx > 0f) (finalOffsetPx / maxOffsetPx).coerceIn(0f, 1f) else 0.5f
+                                    dragOffsetPx = 0f
+                                    onHandlePositionRatioChange(newRatio)
+                                },
+                            )
                             .clickable(onClick = onReveal),
                         contentAlignment = Alignment.Center,
                     ) {
