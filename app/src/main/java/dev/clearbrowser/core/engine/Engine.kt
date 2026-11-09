@@ -139,6 +139,9 @@ interface Engine {
 
     /** Trigger a WebExtension action popup or click event for the active tab. */
     fun triggerExtensionAction(extensionId: String) = Unit
+
+    /** Request a backdrop blur sample of the page area behind the chrome. */
+    fun sampleChromeBackdrop() = Unit
 }
 
 /**
@@ -188,6 +191,9 @@ interface EngineListener {
      * Dominant or average top bar color sampled from the webpage, and whether the color is light.
      */
     fun onTopBarColorSampled(color: Int, isLight: Boolean) = Unit
+
+    /** Blurred backdrop sample of the page area behind the chrome. */
+    fun onBackdropBlurSampled(bitmap: androidx.compose.ui.graphics.ImageBitmap) = Unit
 
     /** HTML5 video or element entered or exited fullscreen mode. */
     fun onFullScreenChanged(fullScreen: Boolean) = Unit

@@ -63,11 +63,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -79,6 +81,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -167,7 +170,17 @@ fun ChromeSurface(
 ) {
     val collapsed = state.chromeMode == ChromeMode.READING
     val expanded = state.chromeMode == ChromeMode.EXPANDED
-    val shouldHideHandle = state.settings.hideHandle && !state.temporaryHandle
+    val handlePresentWhenCollapsed = !state.settings.hideHandle || state.temporaryHandle
+
+    // Remember whether a handle was visible when the chrome was collapsed, so that during
+    // the reveal transition (progress < 1f) we know whether to expand from the handle's
+    // exact position or to slide up from the middle.
+    var hadHandleWhenCollapsed by remember { mutableStateOf(handlePresentWhenCollapsed) }
+    if (collapsed) {
+        hadHandleWhenCollapsed = handlePresentWhenCollapsed
+    }
+
+    val handleExisted = if (collapsed) handlePresentWhenCollapsed else hadHandleWhenCollapsed
 
     val initialText = remember(state.url, state.chromeMode) {
         if (state.isStartPage) "" else state.url
@@ -191,8 +204,8 @@ fun ChromeSurface(
 
     // Track the animated width, not the target: the page should not be able to
     // be tapped through a bar that is on its way somewhere.
-    LaunchedEffect(progress, shouldHideHandle) {
-        if (progress <= 0.01f && shouldHideHandle) onBoundsChanged(null)
+    LaunchedEffect(progress, handleExisted) {
+        if (progress <= 0.01f && !handleExisted) onBoundsChanged(null)
     }
 
     BoxWithConstraints(
@@ -215,8 +228,8 @@ fun ChromeSurface(
         val currentHandleOffsetPx = (baseOffsetPx + dragOffsetPx).coerceIn(0f, maxOffsetPx)
 
         // Where the handle sits, in the same coordinate space as the bar.
-        // If user wants no handle, it always disappears to the center middle.
-        val targetHandleOffset: Dp = if (shouldHideHandle) {
+        // If there was no handle, it always appears/disappears to the center middle.
+        val targetHandleOffset: Dp = if (!handleExisted) {
             maxOffsetDp / 2f
         } else {
             with(density) { currentHandleOffsetPx.toDp() }
@@ -227,8 +240,9 @@ fun ChromeSurface(
 
         val isDark = resolveIsDark(state.settings.appTheme, isSystemInDarkTheme())
         val chromeTheme = state.settings.chromeTheme
-        val hideOffsetY = if (shouldHideHandle) lerpDp(HANDLE_SIZE + HANDLE_MARGIN * 3, 0.dp, progress) else 0.dp
-        val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark)
+        val hideOffsetY = if (!handleExisted) lerpDp(HANDLE_SIZE + HANDLE_MARGIN * 3, 0.dp, progress) else 0.dp
+        val hasBackdrop = state.backdropBlur != null && chromeTheme == ChromeTheme.CLEAR
+        val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark, hasBackdrop)
 
         val colorScheme = MaterialTheme.colorScheme
         val acrylicBackground = remember(colorScheme) {
@@ -284,7 +298,7 @@ fun ChromeSurface(
                         .graphicsLayer {
                             translationX = currentOffset.toPx()
                             translationY = hideOffsetY.toPx()
-                            if (shouldHideHandle) {
+                            if (!handleExisted) {
                                 alpha = (progress * 2f).coerceIn(0f, 1f)
                             }
                         }
@@ -295,6 +309,16 @@ fun ChromeSurface(
                             ambientColor = if (isDark) Color.Black.copy(alpha = 0.35f) else Color(0x15000000),
                         )
                         .clip(CircleShape)
+                        .drawBehind {
+                            val blur = state.backdropBlur
+                            if (blur != null) {
+                                drawImage(
+                                    image = blur,
+                                    dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                                    filterQuality = FilterQuality.Low,
+                                )
+                            }
+                        }
                         .background(frostedBackground)
                         .border(BorderStroke(1.dp, frostedBorder), CircleShape)
                 }
@@ -305,7 +329,7 @@ fun ChromeSurface(
                         .graphicsLayer {
                             translationX = currentOffset.toPx()
                             translationY = hideOffsetY.toPx()
-                            if (shouldHideHandle) {
+                            if (!handleExisted) {
                                 alpha = (progress * 2f).coerceIn(0f, 1f)
                             }
                         }
@@ -324,7 +348,7 @@ fun ChromeSurface(
                         .graphicsLayer {
                             translationX = currentOffset.toPx()
                             translationY = hideOffsetY.toPx()
-                            if (shouldHideHandle) {
+                            if (!handleExisted) {
                                 alpha = (progress * 2f).coerceIn(0f, 1f)
                             }
                         }
@@ -346,7 +370,7 @@ fun ChromeSurface(
                         onBoundsChanged(bounds)
                     },
                 horizontalArrangement = when {
-                    shouldHideHandle -> Arrangement.Center
+                    !handleExisted -> Arrangement.Center
                     currentRatio < 0.33f -> Arrangement.Start
                     currentRatio > 0.67f -> Arrangement.End
                     else -> Arrangement.Center
@@ -736,24 +760,44 @@ private fun ExpandedOmnibox(
 }
 
 @Composable
-internal fun rememberFrostedGlassBrushes(isDark: Boolean): Pair<Brush, Brush> {
-    return remember(isDark) {
-        val background = if (isDark) {
-            Brush.verticalGradient(
-                listOf(
-                    Color(0xD8272938), // Translucent acrylic top highlight
-                    Color(0xB51A1C29), // Translucent body
-                    Color(0x9E12131F), // Deeper base
+internal fun rememberFrostedGlassBrushes(isDark: Boolean, hasBackdrop: Boolean = false): Pair<Brush, Brush> {
+    return remember(isDark, hasBackdrop) {
+        val background = if (hasBackdrop) {
+            if (isDark) {
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0x99272938), // Translucent acrylic top highlight
+                        Color(0x771A1C29), // Translucent body
+                        Color(0x6612131F), // Deeper base
+                    )
                 )
-            )
+            } else {
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xAAFFFFFF), // Bright specular white catch
+                        Color(0x88F0F4FA), // Frosted translucent body
+                        Color(0x77DFE5F0), // Cool tinted base
+                    )
+                )
+            }
         } else {
-            Brush.verticalGradient(
-                listOf(
-                    Color(0xF2FFFFFF), // Bright specular white catch
-                    Color(0xD4F0F4FA), // Frosted translucent body
-                    Color(0xBCDFE5F0), // Cool tinted base
+            if (isDark) {
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xD8272938), // Translucent acrylic top highlight
+                        Color(0xB51A1C29), // Translucent body
+                        Color(0x9E12131F), // Deeper base
+                    )
                 )
-            )
+            } else {
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xF2FFFFFF), // Bright specular white catch
+                        Color(0xD4F0F4FA), // Frosted translucent body
+                        Color(0xBCDFE5F0), // Cool tinted base
+                    )
+                )
+            }
         }
 
         val border = if (isDark) {

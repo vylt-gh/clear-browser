@@ -80,6 +80,9 @@ data class ReadingUiState(
     val topBarColor: Int? = null,
     /** Whether the webpage top background is light, for status bar icon contrast. */
     val isTopBarLight: Boolean = true,
+    /** Blurred micro-buffer backdrop sampled from the page region directly behind the chrome. */
+    val backdropBlur: androidx.compose.ui.graphics.ImageBitmap? = null,
+    val backdropBlurVersion: Long = 0L,
     /** Whether an HTML5 element or video is currently in fullscreen mode. */
     val isFullscreen: Boolean = false,
     /** Whether the Find in Page bar is visible. */
@@ -1421,6 +1424,14 @@ class ReadingViewModel(
             _state.value = _state.value.copy(topBarColor = color, isTopBarLight = isLight)
         }
 
+        override fun onBackdropBlurSampled(bitmap: androidx.compose.ui.graphics.ImageBitmap) {
+            if (!isActive) return
+            _state.value = _state.value.copy(
+                backdropBlur = bitmap,
+                backdropBlurVersion = _state.value.backdropBlurVersion + 1L,
+            )
+        }
+
         override fun onFullScreenChanged(fullScreen: Boolean) {
             if (!isActive) return
             _state.value = _state.value.copy(isFullscreen = fullScreen)
@@ -1598,6 +1609,7 @@ class ReadingViewModel(
                 chromeMode = ChromeMode.SUMMONED,
                 temporaryHandle = false,
             )
+            engineForActive()?.sampleChromeBackdrop()
         }
     }
 
@@ -1627,9 +1639,13 @@ class ReadingViewModel(
             tabs = strip.summaries(),
             activeTabId = tab.id,
             topBarColor = if (isBlank) null else _state.value.topBarColor,
+            backdropBlur = if (isBlank) null else _state.value.backdropBlur,
             isFullscreen = false,
             findInPageVisible = false,
         )
+        if (!isBlank) {
+            engine?.sampleChromeBackdrop()
+        }
         refreshBookmarked()
     }
 

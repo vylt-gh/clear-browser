@@ -57,6 +57,9 @@ class GeckoViewEngine(
     private val topBarSampler = TopBarSampler { color, isLight ->
         listener.onTopBarColorSampled(color, isLight)
     }
+    private val chromeBackdropSampler = ChromeBackdropSampler { bitmap ->
+        listener.onBackdropBlurSampled(bitmap)
+    }
 
     private val contextId: String? = if (profile.isIncognito) {
         "private_${profile.name}"
@@ -242,6 +245,7 @@ class GeckoViewEngine(
                 currentUrlString = url
                 currentScrollYPos = 0
                 topBarSampler.reset()
+                chromeBackdropSampler.reset()
                 listener.onUrlChanged(url)
                 listener.onLoadStateChanged(LoadState.LOADING)
             }
@@ -250,6 +254,7 @@ class GeckoViewEngine(
                 listener.onLoadStateChanged(LoadState.COMPLETE)
                 mainHandler.postDelayed({
                     topBarSampler.sample(geckoView, currentUrlString, force = true)
+                    chromeBackdropSampler.sample(geckoView)
                 }, 200)
             }
 
@@ -282,8 +287,10 @@ class GeckoViewEngine(
 
             override fun onFirstContentfulPaint(session: GeckoSession) {
                 topBarSampler.sample(geckoView, currentUrlString)
+                chromeBackdropSampler.sample(geckoView)
                 mainHandler.postDelayed({
                     topBarSampler.sample(geckoView, currentUrlString)
+                    chromeBackdropSampler.sample(geckoView)
                 }, 250)
             }
 
@@ -371,6 +378,7 @@ class GeckoViewEngine(
                         canScrollDown = canDown,
                         userTouchActive = isUser,
                     )
+                    chromeBackdropSampler.sample(geckoView)
                 }
             }
         }
@@ -650,7 +658,10 @@ class GeckoViewEngine(
         if (active && session.isOpen) {
             runtime.webExtensionController.setTabActive(session, true)
         }
-        mainHandler.postDelayed({ topBarSampler.sample(geckoView, currentUrlString) }, 200)
+        mainHandler.postDelayed({
+            topBarSampler.sample(geckoView, currentUrlString)
+            chromeBackdropSampler.sample(geckoView)
+        }, 200)
     }
 
     override fun detach() {
@@ -845,6 +856,10 @@ class GeckoViewEngine(
                 )
             }
         }
+    }
+
+    override fun sampleChromeBackdrop() {
+        chromeBackdropSampler.sample(geckoView)
     }
 
     companion object {
