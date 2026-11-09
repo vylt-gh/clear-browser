@@ -1,6 +1,11 @@
 package dev.clearbrowser.feature.onboarding
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -45,10 +50,15 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,6 +74,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,12 +88,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.AppTheme
 import dev.clearbrowser.core.data.BrowserSettings
@@ -111,7 +127,7 @@ fun OnboardingScreen(
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val coroutineScope = rememberCoroutineScope()
 
     BackHandler(enabled = true) {
@@ -147,7 +163,7 @@ fun OnboardingScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    repeat(3) { index ->
+                    repeat(4) { index ->
                         val isSelected = pagerState.currentPage == index
                         Box(
                             modifier = Modifier
@@ -196,7 +212,8 @@ fun OnboardingScreen(
                         hideHandle = settings.hideHandle,
                         onHideHandleChange = onHideHandleChange,
                     )
-                    2 -> ReadyPage(
+                    2 -> PermissionsPage()
+                    3 -> ReadyPage(
                         isDefaultBrowser = isDefaultBrowser,
                         importedBookmarksCount = importedBookmarksCount,
                         onRequestDefaultBrowser = onRequestDefaultBrowser,
@@ -227,7 +244,7 @@ fun OnboardingScreen(
                     Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                if (pagerState.currentPage < 2) {
+                if (pagerState.currentPage < 3) {
                     Button(
                         onClick = {
                             coroutineScope.launch {
@@ -870,6 +887,344 @@ private fun DummyChromePreview(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionsPage() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var hasNotifications by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+        )
+    }
+    var hasCamera by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var hasMic by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var hasLocation by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    fun refreshPermissions() {
+        hasNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        hasCamera = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        hasMic = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshPermissions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val singleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) {
+        refreshPermissions()
+    }
+
+    val multipleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        refreshPermissions()
+    }
+
+    val allGranted = hasNotifications && hasCamera && hasMic && hasLocation
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_permissions_title),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.onboarding_permissions_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
+        )
+
+        // Grant All button or All Granted indicator
+        if (allGranted) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        RoundedCornerShape(14.dp),
+                    )
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_permissions_all_granted),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        } else {
+            Button(
+                onClick = {
+                    val missing = mutableListOf<String>()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotifications) {
+                        missing.add(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    if (!hasCamera) {
+                        missing.add(Manifest.permission.CAMERA)
+                    }
+                    if (!hasMic) {
+                        missing.add(Manifest.permission.RECORD_AUDIO)
+                    }
+                    if (!hasLocation) {
+                        missing.add(Manifest.permission.ACCESS_FINE_LOCATION)
+                        missing.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    }
+                    if (missing.isNotEmpty()) {
+                        multipleLauncher.launch(missing.toTypedArray())
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Security,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.onboarding_permissions_grant_all),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Notifications
+        PermissionCard(
+            icon = Icons.Rounded.Notifications,
+            iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            iconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            title = stringResource(R.string.onboarding_permission_notifications_title),
+            description = stringResource(R.string.onboarding_permission_notifications_desc),
+            isGranted = hasNotifications,
+            onRequest = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    singleLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            },
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Camera
+        PermissionCard(
+            icon = Icons.Rounded.PhotoCamera,
+            iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            iconContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            title = stringResource(R.string.onboarding_permission_camera_title),
+            description = stringResource(R.string.onboarding_permission_camera_desc),
+            isGranted = hasCamera,
+            onRequest = {
+                singleLauncher.launch(Manifest.permission.CAMERA)
+            },
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Microphone
+        PermissionCard(
+            icon = Icons.Rounded.Mic,
+            iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            iconContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            title = stringResource(R.string.onboarding_permission_mic_title),
+            description = stringResource(R.string.onboarding_permission_mic_desc),
+            isGranted = hasMic,
+            onRequest = {
+                singleLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            },
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Location
+        PermissionCard(
+            icon = Icons.Rounded.LocationOn,
+            iconContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            iconContentColor = MaterialTheme.colorScheme.primary,
+            title = stringResource(R.string.onboarding_permission_location_title),
+            description = stringResource(R.string.onboarding_permission_location_desc),
+            isGranted = hasLocation,
+            onRequest = {
+                multipleLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                    )
+                )
+            },
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Privacy note card
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Shield,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = stringResource(R.string.onboarding_permissions_privacy_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun PermissionCard(
+    icon: ImageVector,
+    iconContainerColor: Color,
+    iconContentColor: Color,
+    title: String,
+    description: String,
+    isGranted: Boolean,
+    onRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .border(
+                width = 1.dp,
+                color = if (isGranted) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                } else {
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                },
+                shape = RoundedCornerShape(16.dp),
+            )
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(iconContainerColor),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconContentColor,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (isGranted) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_permission_granted),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        } else {
+            FilledTonalButton(
+                onClick = onRequest,
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.permission_allow),
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
         }
     }

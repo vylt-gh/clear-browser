@@ -15,7 +15,7 @@ The browser is architected into three strictly decoupled layers:
 flowchart TD
     subgraph UI ["Compose UI Layer (feature/reading & feature/onboarding)"]
         RS[ReadingScreen]
-        OBS[OnboardingScreen - 3-Step Setup & Live Preview]
+        OBS[OnboardingScreen - 4-Step Setup & Live Preview]
         BC[BrowserChrome - Unified Morphing Surface]
         FIPB[FindInPageBar - In-Page Search]
         CPM[ChromePopupMenu - Anchored Speech Bubble]
@@ -127,7 +127,7 @@ clear-browser/
 │   │   │   │   │   ├── engine/                # GeckoView engine, profiles, reservations, pull-to-refresh
 │   │   │   │   │   └── theme/                 # M3 color palettes, typography & spring motion
 │   │   │   │   └── feature/
-│   │   │   │       ├── onboarding/            # 3-step first-run walkthrough & live preview
+│   │   │   │       ├── onboarding/            # 4-step first-run walkthrough & live preview
 │   │   │   │       └── reading/               # Compose screens, sheets, chrome & ViewModel
 │   │   │   └── res/                           # Multi-density drawables, strings, theme XMLs
 │   │   └── test/java/dev/clearbrowser/        # 128 pure Kotlin unit tests
