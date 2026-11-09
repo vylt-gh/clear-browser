@@ -286,7 +286,7 @@ class MainActivityHost(private val activity: ComponentActivity) : BrowserHost {
             val spec = DownloadManager.Request(uri)
             spec.setTitle(filename)
             spec.setNotificationVisibility(
-                DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED,
+                DownloadManager.Request.VISIBILITY_HIDDEN,
             )
             spec.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename)
 
