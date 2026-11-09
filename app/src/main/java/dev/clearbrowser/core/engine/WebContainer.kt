@@ -42,6 +42,12 @@ import android.widget.FrameLayout
  */
 class WebContainer(context: Context) : FrameLayout(context) {
 
+    init {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            importantForAutofill = IMPORTANT_FOR_AUTOFILL_YES
+        }
+    }
+
     /** True between ACTION_DOWN and ACTION_UP on the page itself. */
     var isUserTouching: Boolean = false
         private set

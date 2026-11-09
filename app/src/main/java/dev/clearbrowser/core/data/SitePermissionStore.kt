@@ -35,6 +35,29 @@ class SitePermissionStore internal constructor(private val file: File) {
         writeToDisk(current)
     }
 
+    /**
+     * Returns true if the given permission is already recorded for the origin/host.
+     */
+    fun hasPermission(origin: String, permissionType: String): Boolean {
+        val cleanHost = extractHost(origin)
+        val pType = permissionType.trim().lowercase()
+        return _permissions.value.any {
+            val entryHost = extractHost(it.origin)
+            val entryType = it.permissionType.trim().lowercase()
+            entryHost == cleanHost && (entryType == pType || entryType.contains(pType) || pType.contains(entryType))
+        }
+    }
+
+    private fun extractHost(raw: String): String {
+        return raw.removePrefix("http://")
+            .removePrefix("https://")
+            .substringBefore('/')
+            .substringBefore(':')
+            .removePrefix("www.")
+            .trim()
+            .lowercase()
+    }
+
     fun revoke(origin: String, permissionType: String) {
         val updated = _permissions.value.filterNot { it.origin == origin && it.permissionType == permissionType }
         _permissions.value = updated

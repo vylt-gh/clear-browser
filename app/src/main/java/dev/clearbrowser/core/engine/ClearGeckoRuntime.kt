@@ -166,6 +166,7 @@ object ClearGeckoRuntime {
         val settings = GeckoRuntimeSettings.Builder()
             .aboutConfigEnabled(true)
             .extensionsWebAPIEnabled(true)
+            .loginAutofillEnabled(true)
             .contentBlocking(
                 ContentBlocking.Settings.Builder()
                     .enhancedTrackingProtectionLevel(ContentBlocking.EtpLevel.STRICT)

@@ -33,7 +33,12 @@ class GeckoViewEngine(
     private val runtime: GeckoRuntime = ClearGeckoRuntime.get(context),
 ) : Engine {
 
-    private val geckoView = GeckoView(context)
+    private val geckoView = GeckoView(context).apply {
+        setAutofillEnabled(true)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_YES
+        }
+    }
     private val session: GeckoSession
 
     private var container: WebContainer? = null
@@ -387,8 +392,13 @@ class GeckoViewEngine(
                 session: GeckoSession,
                 perm: GeckoSession.PermissionDelegate.ContentPermission,
             ): GeckoResult<Int> {
-                val result = GeckoResult<Int>()
                 val hostName = perm.uri.let { runCatching { Uri.parse(it).host }.getOrNull() } ?: perm.uri
+                val permCategoryKey = when (perm.permission) {
+                    GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "location"
+                    GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> "notifications"
+                    GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE -> "storage"
+                    else -> "features"
+                }
                 val permTypeStr = when (perm.permission) {
                     GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> context.getString(R.string.permission_location)
                     GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> context.getString(R.string.permission_notifications)
@@ -396,6 +406,20 @@ class GeckoViewEngine(
                     else -> "features"
                 }
 
+                val permStore = dev.clearbrowser.core.data.SitePermissionStore.forContext(context)
+                val settings = dev.clearbrowser.core.data.SettingsStore(context).state.value
+
+                val autoAccept = settings.autoAcceptPermissions.contains(permCategoryKey)
+                val alreadyGranted = permStore.hasPermission(hostName, permTypeStr)
+
+                if (autoAccept || alreadyGranted) {
+                    if (autoAccept && !alreadyGranted) {
+                        permStore.recordPermission(hostName, permTypeStr)
+                    }
+                    return GeckoResult.fromValue(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
+                }
+
+                val result = GeckoResult<Int>()
                 mainHandler.post {
                     listener.onJsDialog(
                         JsDialog(
@@ -406,8 +430,7 @@ class GeckoViewEngine(
                             hasInput = false,
                             withCancel = true,
                             onAccept = {
-                                dev.clearbrowser.core.data.SitePermissionStore.forContext(context)
-                                    .recordPermission(hostName, permTypeStr)
+                                permStore.recordPermission(hostName, permTypeStr)
                                 result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
                             },
                             onDismiss = {
@@ -436,6 +459,22 @@ class GeckoViewEngine(
                     else -> "Camera / Microphone"
                 }
 
+                val permStore = dev.clearbrowser.core.data.SitePermissionStore.forContext(context)
+                val settings = dev.clearbrowser.core.data.SettingsStore(context).state.value
+
+                val autoAccept = settings.autoAcceptPermissions.contains("media")
+                val alreadyGranted = permStore.hasPermission(hostName, deviceStr)
+
+                if (autoAccept || alreadyGranted) {
+                    if (autoAccept && !alreadyGranted) {
+                        permStore.recordPermission(hostName, deviceStr)
+                    }
+                    mainHandler.post {
+                        callback.grant(video?.firstOrNull(), audio?.firstOrNull())
+                    }
+                    return
+                }
+
                 mainHandler.post {
                     listener.onJsDialog(
                         JsDialog(
@@ -446,8 +485,7 @@ class GeckoViewEngine(
                             hasInput = false,
                             withCancel = true,
                             onAccept = {
-                                dev.clearbrowser.core.data.SitePermissionStore.forContext(context)
-                                    .recordPermission(hostName, deviceStr)
+                                permStore.recordPermission(hostName, deviceStr)
                                 callback.grant(video?.firstOrNull(), audio?.firstOrNull())
                             },
                             onDismiss = {
@@ -588,6 +626,10 @@ class GeckoViewEngine(
                 ViewGroup.LayoutParams.MATCH_PARENT,
             ),
         )
+        geckoView.setAutofillEnabled(true)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            geckoView.importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_YES
+        }
         geckoView.setSession(session)
         if (active && session.isOpen) {
             runtime.webExtensionController.setTabActive(session, true)

@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.AddToHomeScreen
 import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Search
@@ -144,6 +146,8 @@ fun ChromePopupMenu(
     onFindInPage: () -> Unit,
     onShare: () -> Unit = {},
     onCopyLink: () -> Unit = {},
+    onAddToHomeScreen: () -> Unit = {},
+    onHideChrome: () -> Unit = {},
     onSettings: () -> Unit,
     chromeTheme: ChromeTheme = ChromeTheme.CLEAR,
     modifier: Modifier = Modifier,
@@ -263,6 +267,14 @@ fun ChromePopupMenu(
             )
             if (canShare) {
                 PopupMenuItem(
+                    icon = Icons.AutoMirrored.Rounded.AddToHomeScreen,
+                    label = stringResource(R.string.menu_add_to_homescreen),
+                    onClick = {
+                        onDismiss()
+                        onAddToHomeScreen()
+                    },
+                )
+                PopupMenuItem(
                     icon = Icons.Rounded.Share,
                     label = stringResource(R.string.menu_share),
                     onClick = {
@@ -279,6 +291,14 @@ fun ChromePopupMenu(
                     },
                 )
             }
+            PopupMenuItem(
+                icon = Icons.Rounded.ExpandMore,
+                label = stringResource(R.string.menu_hide_chrome),
+                onClick = {
+                    onDismiss()
+                    onHideChrome()
+                },
+            )
             PopupMenuItem(
                 icon = Icons.Rounded.Settings,
                 label = stringResource(R.string.menu_settings),

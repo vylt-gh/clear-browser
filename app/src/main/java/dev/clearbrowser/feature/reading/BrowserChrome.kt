@@ -1,5 +1,6 @@
 package dev.clearbrowser.feature.reading
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -8,9 +9,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,6 +68,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
@@ -150,8 +154,10 @@ fun ChromeSurface(
     onFindInPage: () -> Unit = {},
     onSharePage: () -> Unit = {},
     onCopyLink: () -> Unit = {},
+    onAddToHomeScreen: () -> Unit = {},
     onSettings: () -> Unit = {},
     onToggleBookmark: () -> Unit = {},
+    onToggleChrome: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val collapsed = state.chromeMode == ChromeMode.READING
@@ -178,10 +184,12 @@ fun ChromeSurface(
     val density = LocalDensity.current
     val bounds = remember { android.graphics.RectF() }
 
+    val hideHandle = state.settings.hideHandle
+
     // Track the animated width, not the target: the page should not be able to
     // be tapped through a bar that is on its way somewhere.
-    LaunchedEffect(progress) {
-        if (progress <= 0.01f) onBoundsChanged(null)
+    LaunchedEffect(progress, hideHandle) {
+        if (progress <= 0.01f && hideHandle) onBoundsChanged(null)
     }
 
     BoxWithConstraints(
@@ -361,8 +369,10 @@ fun ChromeSurface(
                         onFindInPage = onFindInPage,
                         onSharePage = onSharePage,
                         onCopyLink = onCopyLink,
+                        onAddToHomeScreen = onAddToHomeScreen,
                         onSettings = onSettings,
                         onToggleBookmark = onToggleBookmark,
+                        onToggleChrome = onToggleChrome,
                         modifier = Modifier.graphicsLayer { alpha = ((progress - 0.5f) * 2f).coerceIn(0f, 1f) },
                     )
                 } else {
@@ -417,8 +427,10 @@ private fun CompactBar(
     onFindInPage: () -> Unit = {},
     onSharePage: () -> Unit = {},
     onCopyLink: () -> Unit = {},
+    onAddToHomeScreen: () -> Unit = {},
     onSettings: () -> Unit = {},
     onToggleBookmark: () -> Unit = {},
+    onToggleChrome: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -469,6 +481,7 @@ private fun CompactBar(
                 )
                 ChromeTheme.MATERIAL -> null
             }
+            val view = LocalView.current
             var pillModifier = Modifier
                 .weight(1f)
                 .clip(CircleShape)
@@ -476,12 +489,18 @@ private fun CompactBar(
             if (addressPillBorder != null) {
                 pillModifier = pillModifier.border(addressPillBorder, CircleShape)
             }
+            @OptIn(ExperimentalFoundationApi::class)
             pillModifier = pillModifier
                 .height(44.dp)
                 // Tapping the address is the primary way into the
-                // browser's own UI, so it has to be the most
-                // tappable thing in the pill.
-                .clickable(onClick = onExpandOmnibox)
+                // browser's own UI. Long pressing hides the chrome.
+                .combinedClickable(
+                    onClick = onExpandOmnibox,
+                    onLongClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        onToggleChrome()
+                    },
+                )
                 .padding(horizontal = 14.dp)
 
             Row(
@@ -584,6 +603,8 @@ private fun CompactBar(
                                 onFindInPage = onFindInPage,
                                 onShare = onSharePage,
                                 onCopyLink = onCopyLink,
+                                onAddToHomeScreen = onAddToHomeScreen,
+                                onHideChrome = onToggleChrome,
                                 onSettings = onSettings,
                                 chromeTheme = chromeTheme,
                             )

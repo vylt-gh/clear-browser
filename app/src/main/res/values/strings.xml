@@ -137,7 +137,13 @@
     <string name="extensions_footer_hint">Manifest V2 extensions run with full capabilities directly on Mozilla GeckoView.</string>
     <string name="menu_share">Share…</string>
     <string name="menu_copy_link">Copy link</string>
+    <string name="menu_add_to_homescreen">Add to Home screen</string>
+    <string name="toast_adding_to_homescreen">Adding to Home screen…</string>
+    <string name="toast_shortcut_not_supported">Your home screen does not support pinned shortcuts</string>
+    <string name="menu_hide_chrome">Hide navigation bar</string>
     <string name="toast_link_copied">Link copied to clipboard</string>
+    <string name="settings_hide_chrome_on_press">Press to hide bar</string>
+    <string name="settings_hide_chrome_on_press_subtitle">Disables auto-hiding on scroll. Long-press the address bar or use the menu to hide.</string>
     <string name="settings_text_zoom">Text scaling</string>
     <string name="settings_text_zoom_subtitle">Scale text size across web pages</string>
     <string name="settings_clear_history">Browsing history</string>
@@ -170,6 +176,9 @@
     <string name="settings_site_permissions">Site permissions</string>
     <string name="settings_site_permissions_subtitle">Manage permissions granted to websites</string>
     <string name="settings_site_permissions_empty">No websites currently have saved permissions</string>
+    <string name="settings_site_permissions_auto_accept_title">Auto-accept permissions</string>
+    <string name="settings_site_permissions_auto_accept_subtitle">Automatically grant permissions without prompting</string>
+    <string name="settings_site_permissions_saved_title">Saved site permissions</string>
     <string name="settings_site_permissions_revoke">Revoke</string>
     <string name="settings_site_permissions_revoke_all">Revoke all</string>
 

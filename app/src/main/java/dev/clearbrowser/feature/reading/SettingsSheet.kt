@@ -89,12 +89,14 @@ fun SettingsSheet(
     onTextZoomChange: (Int) -> Unit = {},
     onChromeThemeChange: (ChromeTheme) -> Unit = {},
     onHideHandleChange: (Boolean) -> Unit = {},
+    onHideChromeOnPressChange: (Boolean) -> Unit = {},
     onPullToRefreshChange: (Boolean) -> Unit = {},
     onCanopyDownloadsChange: (Boolean) -> Unit = {},
     onClearBrowsingData: (Boolean, Boolean, Boolean) -> Unit,
     sitePermissions: List<dev.clearbrowser.core.data.SitePermission> = emptyList(),
     onRevokeSitePermission: (String, String) -> Unit = { _, _ -> },
     onClearAllSitePermissions: () -> Unit = {},
+    onToggleAutoAcceptPermission: (String, Boolean) -> Unit = { _, _ -> },
     isDefaultBrowser: Boolean = false,
     onRequestDefaultBrowser: () -> Unit = {},
     onOpenOnboarding: () -> Unit = {},
@@ -199,6 +201,12 @@ fun SettingsSheet(
                 onCheckedChange = onAutoHideChange,
             )
             SwitchRow(
+                title = stringResource(R.string.settings_hide_chrome_on_press),
+                subtitle = stringResource(R.string.settings_hide_chrome_on_press_subtitle),
+                checked = settings.hideChromeOnPress,
+                onCheckedChange = onHideChromeOnPressChange,
+            )
+            SwitchRow(
                 title = stringResource(R.string.menu_hide_handle),
                 subtitle = stringResource(R.string.menu_hide_handle_subtitle),
                 checked = settings.hideHandle,
@@ -281,19 +289,72 @@ fun SettingsSheet(
                 Text(text = stringResource(R.string.settings_site_permissions))
             },
             text = {
-                if (sitePermissions.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     Text(
-                        text = stringResource(R.string.settings_site_permissions_empty),
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = stringResource(R.string.settings_site_permissions_auto_accept_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_site_permissions_auto_accept_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
+
+                    val autoPerms = settings.autoAcceptPermissions
+                    val permOptions = listOf(
+                        "location" to stringResource(R.string.onboarding_permission_location_title),
+                        "notifications" to stringResource(R.string.onboarding_permission_notifications_title),
+                        "storage" to stringResource(R.string.permission_storage),
+                        "media" to stringResource(R.string.permission_camera_microphone),
+                    )
+
+                    permOptions.forEach { (key, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    onToggleAutoAcceptPermission(key, !autoPerms.contains(key))
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Switch(
+                                checked = autoPerms.contains(key),
+                                onCheckedChange = { checked ->
+                                    onToggleAutoAcceptPermission(key, checked)
+                                },
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    Text(
+                        text = stringResource(R.string.settings_site_permissions_saved_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+
+                    if (sitePermissions.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.settings_site_permissions_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
                         sitePermissions.forEach { perm ->
                             Row(
                                 modifier = Modifier

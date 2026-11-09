@@ -5,10 +5,14 @@ import android.app.role.RoleManager
 import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -28,6 +32,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import androidx.core.view.WindowCompat
@@ -131,6 +138,50 @@ class MainActivity : ComponentActivity() {
         val clip = ClipData.newPlainText("URL", url)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(this, R.string.toast_link_copied, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun addToHomeScreen(url: String, title: String) {
+        if (url.isBlank() || url.startsWith("about:")) return
+        if (!ShortcutManagerCompat.isRequestPinShortcutSupported(this)) {
+            Toast.makeText(this, R.string.toast_shortcut_not_supported, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val shortcutIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            setPackage(packageName)
+            component = ComponentName(this@MainActivity, MainActivity::class.java)
+        }
+
+        val host = runCatching { Uri.parse(url).host }.getOrNull()
+        val cachedFavicon = host?.let { faviconStore.getFromMemory(it) }
+
+        val iconCompat = if (cachedFavicon != null && !cachedFavicon.isRecycled) {
+            val size = 192
+            val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(output)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0xFF242426.toInt()
+            }
+            canvas.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), 36f, 36f, paint)
+            val targetFaviconSize = 112
+            val scaledFavicon = Bitmap.createScaledBitmap(cachedFavicon, targetFaviconSize, targetFaviconSize, true)
+            val offset = (size - targetFaviconSize) / 2f
+            canvas.drawBitmap(scaledFavicon, offset, offset, null)
+            IconCompat.createWithBitmap(output)
+        } else {
+            IconCompat.createWithResource(this, R.mipmap.ic_launcher)
+        }
+
+        val label = title.ifBlank { host ?: url }.take(25)
+        val pinShortcutInfo = ShortcutInfoCompat.Builder(this, "shortcut_${url.hashCode()}")
+            .setShortLabel(label)
+            .setLongLabel(title.ifBlank { host ?: url })
+            .setIcon(iconCompat)
+            .setIntent(shortcutIntent)
+            .build()
+
+        ShortcutManagerCompat.requestPinShortcut(this, pinShortcutInfo, null)
+        Toast.makeText(this, R.string.toast_adding_to_homescreen, Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -601,6 +652,10 @@ class MainActivity : ComponentActivity() {
                 val s = viewModel.state.value
                 copyLink(s.url)
             },
+            onAddToHomeScreen = {
+                val s = viewModel.state.value
+                addToHomeScreen(s.url, s.title)
+            },
             onShareUrl = ::sharePage,
             onCopyUrl = ::copyLink,
             onCloseContextMenu = viewModel::closeContextMenu,
@@ -649,8 +704,10 @@ class MainActivity : ComponentActivity() {
             onSearchEngineChange = settings::setSearchEngine,
             onAutoHideChange = settings::setAutoHideChrome,
             onHideHandleChange = settings::setHideHandle,
+            onHideChromeOnPressChange = settings::setHideChromeOnPress,
             onPullToRefreshChange = settings::setPullToRefresh,
             onCanopyDownloadsChange = settings::setCanopyDownloads,
+            onToggleAutoAcceptPermission = settings::setAutoAcceptPermission,
             onDynamicColorChange = settings::setDynamicColor,
             onImmersiveChange = { viewModel.setImmersive(it) },
             onIncognitoChange = viewModel::setIncognito,

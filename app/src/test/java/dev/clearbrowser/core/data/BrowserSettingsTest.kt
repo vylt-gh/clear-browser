@@ -121,4 +121,29 @@ class BrowserSettingsTest {
         val settings = BrowserSettings(canopyDownloads = false)
         assertEquals(false, settings.canopyDownloads)
     }
+
+    @Test
+    fun defaultHideChromeOnPressIsFalse() {
+        val settings = BrowserSettings()
+        assertEquals(false, settings.hideChromeOnPress)
+    }
+
+    @Test
+    fun customHideChromeOnPressIsRetained() {
+        val settings = BrowserSettings(hideChromeOnPress = true)
+        assertEquals(true, settings.hideChromeOnPress)
+    }
+
+    @Test
+    fun defaultAutoAcceptPermissionsIsEmpty() {
+        val settings = BrowserSettings()
+        assertEquals(emptySet<String>(), settings.autoAcceptPermissions)
+    }
+
+    @Test
+    fun customAutoAcceptPermissionsIsRetained() {
+        val perms = setOf("location", "media")
+        val settings = BrowserSettings(autoAcceptPermissions = perms)
+        assertEquals(perms, settings.autoAcceptPermissions)
+    }
 }
