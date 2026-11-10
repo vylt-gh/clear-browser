@@ -57,6 +57,22 @@ interface Engine {
 
     fun reload()
     fun stop()
+
+    /**
+     * Reload the page without trusting the cache.
+     *
+     * A hard reload is the answer to "the site is showing me the old version",
+     * which is a cache problem rather than a connection problem: the document
+     * is fetched again from the network, and the resources that come with it
+     * are not read from the disk cache either.
+     *
+     * @param clearCache true to empty the cache first, so nothing the reload
+     *   asks for can be served out of it. The reload waits for the cache to
+     *   actually be empty, because a reload that races the eviction gets the
+     *   very copy it was meant to discard.
+     */
+    fun hardReload(clearCache: Boolean) = Unit
+
     fun canGoBack(): Boolean
     fun canGoForward(): Boolean
     fun goBack()
@@ -143,6 +159,17 @@ interface Engine {
     /** Request a backdrop blur sample of the page area behind the chrome. */
     fun sampleChromeBackdrop() = Unit
 }
+
+/**
+ * The engine's own empty document.
+ *
+ * This is the document the engine loads when it has nothing to show: a blank
+ * page, white by default. It belongs to the engine -- popups use it, a
+ * renderer has to be given something to paint -- and it is not a page the
+ * browser offers to the user. The browser's own new tab page is filed under
+ * its own name.
+ */
+internal const val ABOUT_BLANK = "about:blank"
 
 /**
  * Events the browser chrome cares about. Deliberately coarse: the chrome is a

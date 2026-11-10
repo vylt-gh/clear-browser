@@ -109,6 +109,47 @@ whose range included "off" made the pipeline look broken for no benefit, and
 
 ## Recently landed
 
+### The new tab page is `about:newtab`, and `about:blank` belongs to the engine
+The blank document was doing two jobs. It was the engine's empty document --
+the thing Gecko loads when a session has nothing to show -- and it was also
+the browser's start page, which meant the address bar said `about:blank` on a
+fresh tab, the session file recorded it, and the tab switcher drew it as a
+real page. It is now `about:newtab`: the browser's own name for the page it
+shows when there is nothing to open. The engine's document is left alone.
+
+That separation fixed a bug that had been hiding behind it. The chrome's
+frosted glass samples the engine's own surface to know what is behind it, and
+on a cold boot that surface holds the blank document -- white. So the chrome
+frosted itself with white on the one screen where it is most visible, in a
+dark app, and looked as though it belonged to something else. Two things were
+wrong with it and both are fixed:
+
+- **The blank document is never sampled.** There is no page behind the chrome
+  when the new tab page is up -- the visible surface is the browser's own --
+  so the engine refuses to sample and the chrome falls back to its own
+  colours. A sample is also dropped at the other end, in the ViewModel, so a
+  late one cannot arrive after the user has left the page.
+- **The engine's background is the right colour from the first frame.** The
+  neutral surface behind the page is chosen from the app theme and the system
+  scheme, and the scheme used to be read from the composition -- a frame after
+  the engine had already been built with the light one. It is now read from
+  the Activity before anything is built, so a dark app gets a dark engine on a
+  cold boot rather than a white one.
+
+### The reload button has a menu
+Holding the reload button opens a small menu above it: **Hard reload** fetches
+the page again without trusting the cache, and **Empty cache & hard reload**
+throws the cache away first and waits for that to finish before reloading. A
+tap still reloads, because that is what the button is for; the hold is for the
+two things reload is not, and it costs the everyday tap nothing.
+
+The menu is anchored to the button rather than to the edge of the window, so
+its arrow points at the reload button wherever the chrome is docked, and it is
+dismissed by the back gesture, by hiding the chrome, and by navigating away.
+`Engine.hardReload(clearCache)` is the seam: GeckoView reloads with
+`LOAD_FLAGS_BYPASS_CACHE` and empties the cache through the storage
+controller, the WebView engine does the closest thing it is able to.
+
 ### Bookmarks and history
 The star in the menu saves the page on screen; one row in the menu opens a
 single sheet with a Bookmarks / History segmented control. Tapping a row opens

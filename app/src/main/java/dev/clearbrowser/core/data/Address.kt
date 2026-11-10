@@ -40,7 +40,7 @@ fun resolveAddress(raw: String, engine: SearchEngine): String? {
  * Schemes that mean "this is already a URL".
  *
  * `about:` and `data:` are here because the browser itself produces them
- * (`about:blank` on a fresh session), `file:` because local files are still a
+ * (`about:newtab` on a fresh session), `file:` because local files are still a
  * legitimate thing to open, and `javascript:` because a user who types it is
  * deliberately running something and silently searching for it instead would
  * be a surprise.

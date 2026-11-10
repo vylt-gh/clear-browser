@@ -64,6 +64,7 @@ Built with Kotlin and Jetpack Compose and powered by Mozilla GeckoView, Clear pr
 - **Adaptive Top Bar**: The Android status bar automatically samples and adopts the website's dominant header color for an unbroken, edge-to-edge feel.
 - **Live Download Notifications & Canopy Progress**: Real-time progress bar, byte counts, and cancel action right from your notification shade—with an optional slim progress bar running across the top canopy edge while browsing.
 - **Find in Page**: Real-time in-page search with match counter (`X of Y`), next/prev controls, and full multi-highlighting.
+- **Hold-to-Reload Menu**: Long-press the reload button for a **hard reload** or an **empty cache & hard reload** — the one-tap reload is never more than one tap away.
 
 ### 🔒 100% Local, Autofill & Web Capabilities
 - **Native Android Autofill Support**: Full compatibility with system autofill managers (1Password, Bitwarden, Keepass, Google) for zero-friction credential saving and login filling.
@@ -108,7 +109,7 @@ Grab the latest APK release from the [Releases page](https://github.com/vylt-gh/
 git clone https://github.com/vylt-gh/clear-browser.git
 cd clear-browser
 
-# Run unit tests (141 passing tests across 20 test suites)
+# Run unit tests (150 passing tests across 21 test suites)
 ./gradlew testDebugUnitTest
 
 # Build debug APK

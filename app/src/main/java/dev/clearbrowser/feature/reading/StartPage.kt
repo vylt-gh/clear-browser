@@ -16,6 +16,54 @@ import androidx.compose.ui.unit.dp
 import dev.clearbrowser.R
 
 /**
+ * The browser's own new tab page.
+ *
+ * ## Why this is not `about:blank`
+ *
+ * `about:blank` is the *engine's* empty document. The engine loads one the
+ * moment it is opened, before any navigation, and every browser keeps it for
+ * internal use -- a popup window that only exists to carry a URL across, a
+ * session that has nothing to restore, a renderer that has to be given
+ * something to paint. It is not a page anyone can be shown, and it is not a
+ * URL that means anything to the user.
+ *
+ * This browser was using it as its start page anyway, which borrowed that
+ * meaning: the address bar showed `about:blank` on a fresh tab, the session
+ * file recorded it, and the tab switcher drew it as a real page. Worse, the
+ * blank document is *white* by default, and the engine paints it inside the
+ * surface the chrome samples its blur from -- so on a cold boot the chrome
+ * frosted itself with white and looked like it belonged to another app.
+ *
+ * `about:newtab` is the browser's own name for the page it shows when there
+ * is nothing to open. It is never loaded into the engine, it is never
+ * recorded in history, and it leaves `about:blank` to the engine that needs
+ * it.
+ */
+internal const val ABOUT_NEWTAB = "about:newtab"
+
+/**
+ * The engine's empty document.
+ *
+ * Kept only so a session written by an older build -- which recorded the
+ * engine's blank document as the tab's URL -- is still recognised as the start
+ * page rather than as a real page with a broken address.
+ */
+internal const val ABOUT_BLANK = "about:blank"
+
+/**
+ * Whether [url] means "the browser's new tab page".
+ *
+ * ## Why blank counts
+ *
+ * A tab that has not been given a URL yet is the start page too. The engine
+ * reports its blank document before the browser has anything else to say, and
+ * the difference between "no page" and "the new tab page" is not one the
+ * user can see.
+ */
+internal fun isStartPageUrl(url: String?): Boolean =
+    url.isNullOrBlank() || url == ABOUT_NEWTAB || url == ABOUT_BLANK
+
+/**
  * What a browser with nothing open should show: nothing.
  *
  * ## Why this exists at all, rather than a blank WebView

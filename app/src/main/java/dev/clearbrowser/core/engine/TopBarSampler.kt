@@ -36,7 +36,7 @@ class TopBarSampler(
      * If already sampled for this exact [url], skips to prevent redundant work.
      */
     fun sample(root: View, url: String?, force: Boolean = false) {
-        if (url.isNullOrBlank() || url == "about:blank") return
+        if (url.isNullOrBlank() || url == ABOUT_BLANK) return
         if (!force && url == lastSampledUrl) return
         if (isSampling) return
 

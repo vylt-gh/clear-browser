@@ -254,7 +254,7 @@ class GeckoViewEngine(
                 listener.onLoadStateChanged(LoadState.COMPLETE)
                 mainHandler.postDelayed({
                     topBarSampler.sample(geckoView, currentUrlString, force = true)
-                    chromeBackdropSampler.sample(geckoView)
+                    sampleBackdrop()
                 }, 200)
             }
 
@@ -287,10 +287,10 @@ class GeckoViewEngine(
 
             override fun onFirstContentfulPaint(session: GeckoSession) {
                 topBarSampler.sample(geckoView, currentUrlString)
-                chromeBackdropSampler.sample(geckoView)
+                sampleBackdrop()
                 mainHandler.postDelayed({
                     topBarSampler.sample(geckoView, currentUrlString)
-                    chromeBackdropSampler.sample(geckoView)
+                    sampleBackdrop()
                 }, 250)
             }
 
@@ -378,7 +378,7 @@ class GeckoViewEngine(
                         canScrollDown = canDown,
                         userTouchActive = isUser,
                     )
-                    chromeBackdropSampler.sample(geckoView)
+                    sampleBackdrop()
                 }
             }
         }
@@ -660,7 +660,7 @@ class GeckoViewEngine(
         }
         mainHandler.postDelayed({
             topBarSampler.sample(geckoView, currentUrlString)
-            chromeBackdropSampler.sample(geckoView)
+            sampleBackdrop()
         }, 200)
     }
 
@@ -687,6 +687,43 @@ class GeckoViewEngine(
     }
 
     override fun reload() = session.reload()
+
+    /**
+     * Reload, ignoring the cache.
+     *
+     * `LOAD_FLAGS_BYPASS_CACHE` is what makes it a *hard* reload: the document
+     * and everything it pulls in are fetched again instead of being served
+     * out of the disk cache.
+     *
+     * When the cache is emptied as well, the reload waits for the eviction to
+     * finish. Reloading while the cache is still being cleared gets the very
+     * copy the user asked to throw away, which is the one outcome that would
+     * make this look broken.
+     */
+    override fun hardReload(clearCache: Boolean) {
+        // The session can be gone by the time the cache has finished clearing.
+        val reload = {
+            if (session.isOpen) {
+                session.reload(GeckoSession.LOAD_FLAGS_BYPASS_CACHE)
+            }
+        }
+        if (!clearCache) {
+            reload()
+            return
+        }
+        runtime.storageController
+            .clearData(StorageController.ClearFlags.ALL_CACHES)
+            .then(
+                { _ ->
+                    reload()
+                    GeckoResult.fromValue(null)
+                },
+                { _ ->
+                    reload()
+                    GeckoResult.fromValue(null)
+                },
+            )
+    }
 
     override fun stop() = session.stop()
 
@@ -859,8 +896,39 @@ class GeckoViewEngine(
     }
 
     override fun sampleChromeBackdrop() {
-        chromeBackdropSampler.sample(geckoView, force = true)
+        sampleBackdrop(force = true)
     }
+
+    /**
+     * Ask for a blurred sample of the page behind the chrome.
+     *
+     * ## Why the blank document is never sampled
+     *
+     * The sample is taken from the engine's own surface, which is what the
+     * chrome sits on top of. When the engine has no page, that surface holds
+     * its blank document: white, by default, and never anything the user is
+     * looking at.
+     *
+     * On a cold boot that is exactly what the surface holds -- the browser's
+     * new tab page is drawn over it, but the sample is taken from underneath
+     * the overlay -- so the chrome would frost itself with white on the one
+     * screen where it is most visible. Skipping the sample leaves the chrome
+     * with its own colour, which is what it draws over the new tab page
+     * anyway.
+     */
+    private fun sampleBackdrop(force: Boolean = false) {
+        if (isOnBlankDocument()) return
+        chromeBackdropSampler.sample(geckoView, force)
+    }
+
+    /**
+     * Whether the engine is sitting on its own empty document.
+     *
+     * A URL that is not known yet counts: the engine opens with nothing
+     * loaded, and there is no page to blur until it says otherwise.
+     */
+    private fun isOnBlankDocument(): Boolean =
+        currentUrlString == null || currentUrlString == ABOUT_BLANK
 
     companion object {
         private const val KEY_SESSION_STATE = "dev.clearbrowser.gecko.session_state"

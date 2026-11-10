@@ -592,6 +592,10 @@ class MainActivity : ComponentActivity() {
                 state.contextMenu != null -> viewModel.closeContextMenu()
                 // Popup menu from button
                 state.menuPopupVisible -> viewModel.closeMenuPopup()
+                // The reload menu is a popup too, and it is dismissed the same
+                // way: the back gesture means "close this", never "leave the
+                // page".
+                state.reloadPopupVisible -> viewModel.closeReloadPopup()
                 // Dedicated sheets
                 state.extensionPopup != null -> viewModel.closeExtensionPopup()
                 state.settingsVisible -> viewModel.closeSettings()
@@ -621,6 +625,10 @@ class MainActivity : ComponentActivity() {
             onStop = viewModel::reloadOrStop,
             onMenu = viewModel::toggleMenuPopup,
             onCloseMenuPopup = viewModel::closeMenuPopup,
+            onToggleReloadPopup = viewModel::toggleReloadPopup,
+            onDismissReloadPopup = viewModel::closeReloadPopup,
+            onHardReload = { viewModel.hardReload(clearCache = false) },
+            onEmptyCacheAndReload = { viewModel.hardReload(clearCache = true) },
             onOpenBookmarks = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.BOOKMARKS) },
             onOpenHistory = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.HISTORY) },
             onOpenDownloads = { viewModel.openLibrary(dev.clearbrowser.feature.reading.LibraryTab.DOWNLOADS) },

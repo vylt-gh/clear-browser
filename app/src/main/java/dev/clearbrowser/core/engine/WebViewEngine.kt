@@ -599,6 +599,21 @@ class WebViewEngine(
 
     override fun reload() = webView.reload()
 
+    /**
+     * Reload, ignoring the cache.
+     *
+     * The WebView has no flag for "fetch this again whatever the cache says",
+     * so the cache is emptied first and the page is reloaded. That is the
+     * honest approximation; the engine this app ships with (GeckoView) has the
+     * flag itself and does it properly.
+     */
+    override fun hardReload(clearCache: Boolean) {
+        if (clearCache) {
+            webView.clearCache(true)
+        }
+        webView.reload()
+    }
+
     override fun stop() = webView.stopLoading()
 
     override fun canGoBack() = webView.canGoBack()

@@ -181,7 +181,7 @@ private fun TabRow(
                         .clip(RoundedCornerShape(6.dp)),
                 )
             } else {
-                val isBlank = tab.url.isBlank() || tab.url == "about:blank"
+                val isBlank = isStartPageUrl(tab.url)
                 val initial = (host.firstOrNull() ?: title.firstOrNull() ?: '•')
                     .uppercaseChar()
                     .toString()

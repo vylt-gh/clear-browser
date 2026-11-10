@@ -33,9 +33,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
-/** The blank document the engine shows when there is nothing to restore. */
-private const val ABOUT_BLANK = "about:blank"
-
 data class ReadingUiState(
     val url: String = "",
     val title: String = "",
@@ -95,6 +92,8 @@ data class ReadingUiState(
     val findTotalMatches: Int = 0,
     /** Whether the popup action menu from the three-dots button is open. */
     val menuPopupVisible: Boolean = false,
+    /** Whether the reload button's long-press menu is open. */
+    val reloadPopupVisible: Boolean = false,
     /** Whether the full settings bottom sheet is open. */
     val settingsVisible: Boolean = false,
     /** Whether the extensions management sheet is open. */
@@ -124,9 +123,13 @@ data class ReadingUiState(
      * purpose is to be an example in documentation, and loading it made the app
      * look like it had a homepage that it did not have. A browser with nothing
      * remembered should show nothing, which is what this is.
+     *
+     * The URL it is filed under is [ABOUT_NEWTAB], not `about:blank`: the blank
+     * document belongs to the engine, and the browser used to hand it out as
+     * though it were a page of its own.
      */
     val isStartPage: Boolean
-        get() = url.isBlank() || url == ABOUT_BLANK
+        get() = isStartPageUrl(url)
 
     /**
      * True only while a load is genuinely in flight.
@@ -285,7 +288,13 @@ class ReadingViewModel(
     private val progressFlow = MutableStateFlow(0)
     val progress: StateFlow<Int> = progressFlow.asStateFlow()
 
-    private var isSystemDark: Boolean = false
+    /**
+     * The system colour scheme, as the Activity reports it.
+     *
+     * Not the app's effective darkness: the app theme can force light or dark
+     * whatever the system says, and [isDarkTheme] is what resolves the two.
+     */
+    private var systemDark: Boolean = false
 
     /**
      * The library, as the sheets read it.
@@ -395,6 +404,13 @@ class ReadingViewModel(
         host = browserHost
         container = parent
 
+        // The scheme is read from the Activity before anything is built rather
+        // than waited for from the composition. The composition reports it a
+        // frame later, and an engine created before that gets the light
+        // neutral background even in a dark app -- which is the white the
+        // chrome was frosting itself with on a cold boot.
+        systemDark = activity.isSystemDark()
+
         val firstAttach = !engineAttached
         engineAttached = true
 
@@ -443,7 +459,14 @@ class ReadingViewModel(
                 title = saved.title,
                 // A page this browser no longer has is treated as a blank tab
                 // rather than loaded. See [isRetiredStartPage].
-                url = if (isRetiredStartPage(saved.url)) "" else saved.url,
+                url = when {
+                    isRetiredStartPage(saved.url) -> ""
+                    // An older build recorded the engine's blank document as
+                    // the tab's page. It is the new tab page, and it is filed
+                    // under the browser's own name from here on.
+                    saved.url == ABOUT_BLANK -> ABOUT_NEWTAB
+                    else -> saved.url
+                },
                 scrollY = saved.scrollY,
             )
             strip.add(tab)
@@ -463,7 +486,7 @@ class ReadingViewModel(
      * what the user has open, not a replacement for it.
      */
     private fun openRequested(url: String) {
-        val onlyBlank = strip.tabs.size == 1 && strip.tabs.first().url.isBlank()
+        val onlyBlank = strip.tabs.size == 1 && isStartPageUrl(strip.tabs.first().url)
         if (onlyBlank) {
             ensureActiveEngine()?.loadUrl(url)
         } else {
@@ -523,6 +546,7 @@ class ReadingViewModel(
             // library rather than stacking a second modal sheet on it.
             libraryTab = null,
             menuPopupVisible = false,
+            reloadPopupVisible = false,
             settingsVisible = false,
             extensionsVisible = false,
         )
@@ -598,7 +622,7 @@ class ReadingViewModel(
         if (restored != null && runCatching { engine.restoreState(restored) }.getOrDefault(false)) {
             // The engine restored its own history, including the current page.
             pendingScroll[tab.id] = tab.scrollY
-        } else if (tab.url.isNotBlank() && tab.url != ABOUT_BLANK) {
+        } else if (!isStartPageUrl(tab.url)) {
             pendingScroll[tab.id] = tab.scrollY
             engine.loadUrl(tab.url)
         }
@@ -659,7 +683,7 @@ class ReadingViewModel(
         // Start clean in the new profile rather than replaying a private page
         // into a normal window, where it would be written to disk.
         val reopen = if (leavingIncognito) null else carriedUrl
-        newTab(if (reopen.isNullOrBlank() || reopen == ABOUT_BLANK) "" else reopen)
+        newTab(if (isStartPageUrl(reopen)) "" else reopen.orEmpty())
     }
 
     // ------------------------------------------------------------- persistence
@@ -749,8 +773,8 @@ class ReadingViewModel(
      * page background can follow it.
      */
     fun setSystemDark(dark: Boolean) {
-        if (isSystemDark == dark) return
-        isSystemDark = dark
+        if (systemDark == dark) return
+        systemDark = dark
     }
 
     // ------------------------------------------------------------ user intent
@@ -761,6 +785,7 @@ class ReadingViewModel(
         _state.value = _state.value.copy(
             chromeMode = ChromeMode.SUMMONED,
             searchSuggestions = emptyList(),
+            reloadPopupVisible = false,
         )
         scrollIntent.reset()
         // A fresh tab has no engine yet; this is what creates one for it.
@@ -769,6 +794,7 @@ class ReadingViewModel(
     }
 
     fun reloadOrStop() {
+        closeReloadPopup()
         val engine = engineForActive() ?: return
         if (_state.value.isLoading) engine.stop() else engine.reload()
     }
@@ -798,16 +824,25 @@ class ReadingViewModel(
         return true
     }
 
+    /**
+     * Go back to the browser's new tab page.
+     *
+     * The engine is rebuilt rather than navigated, because the new tab page is
+     * not a document: it is the browser's own surface, drawn over an engine
+     * that has nothing loaded. The engine's blank document is the engine's
+     * business -- `about:blank` -- and the browser's page is filed under
+     * [ABOUT_NEWTAB].
+     */
     fun goToStartPage() {
         val tab = strip.active ?: return
         engines.remove(tab.id)?.let { runCatching { it.destroy() } }
-        strip.update(tab.id) { it.copy(url = ABOUT_BLANK, title = "", scrollY = 0) }
+        strip.update(tab.id) { it.copy(url = ABOUT_NEWTAB, title = "", scrollY = 0) }
         pendingScroll.remove(tab.id)
         lastHeight.remove(tab.id)
         ensureActiveEngine()
         revealChrome()
         _state.value = _state.value.copy(
-            url = ABOUT_BLANK,
+            url = ABOUT_NEWTAB,
             title = "",
             loadState = LoadState.IDLE,
             secure = true,
@@ -815,9 +850,13 @@ class ReadingViewModel(
             canGoForward = false,
             scrollAtTop = true,
             topBarColor = null,
-            isTopBarLight = !isSystemDark,
+            isTopBarLight = !isDarkTheme(),
             chromeMode = ChromeMode.SUMMONED,
             tabs = strip.summaries(),
+            // There is no page behind the chrome to blur. Leaving the last
+            // page's blur here would frost the chrome with a page the user
+            // cannot see.
+            backdropBlur = null,
         )
     }
 
@@ -883,6 +922,10 @@ class ReadingViewModel(
         _state.value = _state.value.copy(
             chromeMode = ChromeMode.READING,
             temporaryHandle = true,
+            // The reload menu is anchored to a button in the bar. The bar is
+            // about to leave, and a menu that came back with it would be
+            // pointing at nothing.
+            reloadPopupVisible = false,
         )
     }
 
@@ -890,6 +933,7 @@ class ReadingViewModel(
         _state.value = _state.value.copy(
             chromeMode = ChromeMode.EXPANDED,
             temporaryHandle = false,
+            reloadPopupVisible = false,
         )
         val initialQuery = if (_state.value.isStartPage) "" else _state.value.url
         onOmniboxQueryChanged(initialQuery)
@@ -1027,6 +1071,7 @@ class ReadingViewModel(
             menuPopupVisible = !current,
             settingsVisible = false,
             extensionsVisible = false,
+            reloadPopupVisible = false,
         )
     }
 
@@ -1035,6 +1080,7 @@ class ReadingViewModel(
             menuPopupVisible = true,
             settingsVisible = false,
             extensionsVisible = false,
+            reloadPopupVisible = false,
         )
     }
 
@@ -1042,6 +1088,39 @@ class ReadingViewModel(
         if (_state.value.menuPopupVisible) {
             _state.value = _state.value.copy(menuPopupVisible = false)
         }
+    }
+
+    /**
+     * The reload button's long-press menu.
+     *
+     * A separate popup from the three-dots menu, and mutually exclusive with
+     * it: they are anchored to different buttons, and two of them at once
+     * would put two floating menus over the same bar.
+     */
+    fun toggleReloadPopup() {
+        val current = _state.value.reloadPopupVisible
+        _state.value = _state.value.copy(
+            reloadPopupVisible = !current,
+            menuPopupVisible = false,
+        )
+    }
+
+    fun closeReloadPopup() {
+        if (_state.value.reloadPopupVisible) {
+            _state.value = _state.value.copy(reloadPopupVisible = false)
+        }
+    }
+
+    /**
+     * Reload the page the hard way.
+     *
+     * @param clearCache true to empty the cache first, so the reload cannot be
+     *   served out of it.
+     */
+    fun hardReload(clearCache: Boolean) {
+        closeReloadPopup()
+        val engine = engineForActive() ?: return
+        engine.hardReload(clearCache)
     }
 
     fun openSettings() {
@@ -1284,22 +1363,32 @@ class ReadingViewModel(
             progressFlow.value = progress.coerceIn(0, 100)
         }
 
+        /**
+         * The engine reported a new URL.
+         *
+         * The engine's blank document is translated into the browser's own new
+         * tab page before anything else looks at it. Without that, a fresh tab
+         * would record `about:blank` as its page -- in the address bar, in the
+         * session file and in the tab switcher -- which is the engine's
+         * internal document, not a page of the browser's.
+         */
         override fun onUrlChanged(url: String) {
+            val page = if (url == ABOUT_BLANK) ABOUT_NEWTAB else url
             val existingUrl = strip.tabs.find { it.id == tabId }?.url.orEmpty()
-            if (lastCommittedUrl.isBlank() && existingUrl.isNotBlank() && existingUrl != url) {
+            if (lastCommittedUrl.isBlank() && existingUrl.isNotBlank() && existingUrl != page) {
                 lastCommittedUrl = existingUrl
             }
-            strip.update(tabId) { it.copy(url = url) }
+            strip.update(tabId) { it.copy(url = page) }
             publishTabs()
             // A new URL means the previous page is finished, so flush it before
             // the next one starts. This runs for every tab, not only the visible
             // one, or a background navigation would never enter history.
             // Title-less hops are redirects and are dropped; see [flushVisit].
             flushVisit(allowUntitled = visitCompleted)
-            beginVisit(url)
+            beginVisit(page)
             if (!isActive) return
-            reportUrl(url)
-            beginNavigation(url)
+            reportUrl(page)
+            beginNavigation(page)
             refreshBookmarked()
         }
 
@@ -1339,7 +1428,7 @@ class ReadingViewModel(
         }
 
         override fun onPageCommitted(url: String) {
-            lastCommittedUrl = url
+            lastCommittedUrl = if (url == ABOUT_BLANK) ABOUT_NEWTAB else url
             if (!isActive) return
             // Deferred: the view may not be laid out at its final size yet.
             viewModelScope.launch {
@@ -1374,13 +1463,13 @@ class ReadingViewModel(
                 if (strip.tabs.size > 1) {
                     closeTab(tabId)
                 } else {
-                    // Only tab: reset back to empty start page
-                    strip.update(tabId) { it.copy(url = "", title = "") }
+                    // Only tab: reset back to the new tab page
+                    strip.update(tabId) { it.copy(url = ABOUT_NEWTAB, title = "") }
                     publishTabs()
                     if (isActive) {
-                        reportUrl("")
+                        reportUrl(ABOUT_NEWTAB)
                         _state.value = _state.value.copy(
-                            url = "",
+                            url = ABOUT_NEWTAB,
                             title = "",
                             loadState = LoadState.COMPLETE,
                         )
@@ -1424,8 +1513,18 @@ class ReadingViewModel(
             _state.value = _state.value.copy(topBarColor = color, isTopBarLight = isLight)
         }
 
+        /**
+         * A blurred sample of the page behind the chrome arrived.
+         *
+         * Dropped while the new tab page is showing. The engine has no page
+         * then -- it is sitting on its blank document, which is white -- and
+         * the chrome would frost itself with a page the user cannot see. The
+         * visible surface behind the chrome is the browser's own new tab
+         * page, and the chrome has a colour for that already.
+         */
         override fun onBackdropBlurSampled(bitmap: androidx.compose.ui.graphics.ImageBitmap) {
             if (!isActive) return
+            if (_state.value.isStartPage) return
             _state.value = _state.value.copy(
                 backdropBlur = bitmap,
                 backdropBlurVersion = _state.value.backdropBlurVersion + 1L,
@@ -1578,8 +1677,13 @@ class ReadingViewModel(
         // that was in flight across a navigation could be credited to the page
         // the user just landed on.
         scrollIntent.reset()
-        if (url.isBlank() || url == ABOUT_BLANK) {
-            _state.value = _state.value.copy(topBarColor = null)
+        if (isStartPageUrl(url)) {
+            _state.value = _state.value.copy(
+                topBarColor = null,
+                // The new tab page is drawn by the browser, not by the engine,
+                // so there is no page colour to sample and no page to blur.
+                backdropBlur = null,
+            )
         }
     }
 
@@ -1599,6 +1703,7 @@ class ReadingViewModel(
         _state.value = _state.value.copy(
             chromeMode = ChromeMode.READING,
             temporaryHandle = false,
+            reloadPopupVisible = false,
         )
     }
 
@@ -1625,7 +1730,7 @@ class ReadingViewModel(
     private fun pushActiveTab() {
         val tab = strip.active ?: return
         val engine = engines[tab.id]
-        val isBlank = tab.url.isBlank() || tab.url == ABOUT_BLANK
+        val isBlank = isStartPageUrl(tab.url)
         _state.value = _state.value.copy(
             url = tab.url,
             title = tab.title,
@@ -1641,6 +1746,9 @@ class ReadingViewModel(
             backdropBlur = if (isBlank) null else _state.value.backdropBlur,
             isFullscreen = false,
             findInPageVisible = false,
+            // The reload menu belongs to the button that opened it, and that
+            // button belongs to the tab that is on screen.
+            reloadPopupVisible = false,
         )
         if (!isBlank) {
             engine?.sampleChromeBackdrop()
@@ -1823,7 +1931,32 @@ class ReadingViewModel(
     }
 
     /** The neutral surface for this scheme. Never black. */
-    private fun neutralFallback(): Int = if (isSystemDark) 0xFF141218.toInt() else 0xFFF7F2FA.toInt()
+    private fun neutralFallback(): Int = if (isDarkTheme()) 0xFF141218.toInt() else 0xFFF7F2FA.toInt()
+
+    /**
+     * Whether the app is dark, whatever the system says.
+     *
+     * The app theme is a decision the user made, so it wins over the system
+     * scheme. The chrome resolves the same thing the same way -- see
+     * `resolveIsDark` -- and the two have to agree, because the engine's
+     * background is what the chrome's frost is drawn against.
+     */
+    private fun isDarkTheme(): Boolean = when (_state.value.settings.appTheme) {
+        dev.clearbrowser.core.data.AppTheme.SYSTEM -> systemDark
+        dev.clearbrowser.core.data.AppTheme.DARK -> true
+        dev.clearbrowser.core.data.AppTheme.LIGHT -> false
+    }
+
+    /**
+     * Whether the Activity is currently in a dark system scheme.
+     *
+     * Read from the Activity rather than from the composition, because the
+     * engine is built during the first composition and the composition's
+     * answer arrives a frame later.
+     */
+    private fun Activity.isSystemDark(): Boolean =
+        (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     override fun onCleared() {
         destroyAllEngines()

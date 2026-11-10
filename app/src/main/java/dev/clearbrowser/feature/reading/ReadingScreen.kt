@@ -124,6 +124,10 @@ fun ReadingScreen(
     onFindNext: () -> Unit = {},
     onFindPrevious: () -> Unit = {},
     onCloseMenuPopup: () -> Unit = {},
+    onToggleReloadPopup: () -> Unit = {},
+    onDismissReloadPopup: () -> Unit = {},
+    onHardReload: () -> Unit = {},
+    onEmptyCacheAndReload: () -> Unit = {},
     onOpenBookmarks: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onOpenDownloads: () -> Unit = {},
@@ -171,7 +175,10 @@ fun ReadingScreen(
         dev.clearbrowser.core.data.AppTheme.DARK -> true
         dev.clearbrowser.core.data.AppTheme.LIGHT -> false
     }
-    LaunchedEffect(isDark) { onSystemDarkChange(isDark) }
+    // The *system* scheme, not the app's effective darkness: the app theme
+    // decides the rest, and the ViewModel resolves the two the same way the
+    // chrome does.
+    LaunchedEffect(systemDark) { onSystemDarkChange(systemDark) }
 
     // The status bar height, used to place web content below the status bar.
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -438,6 +445,10 @@ fun ReadingScreen(
                     onBoundsChanged = onChromeBounds,
                     onQueryChange = onOmniboxQueryChange,
                     onDismissMenuPopup = onCloseMenuPopup,
+                    onToggleReloadPopup = onToggleReloadPopup,
+                    onDismissReloadPopup = onDismissReloadPopup,
+                    onHardReload = onHardReload,
+                    onEmptyCacheAndReload = onEmptyCacheAndReload,
                     onBookmarks = onOpenBookmarks,
                     onHistory = onOpenHistory,
                     onDownloads = onOpenDownloads,

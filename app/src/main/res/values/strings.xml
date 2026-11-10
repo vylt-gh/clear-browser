@@ -5,6 +5,8 @@
     <string name="chrome_url_field">Address</string>
     <string name="chrome_reload">Reload</string>
     <string name="chrome_reload_stop">Stop</string>
+    <string name="reload_hard">Hard reload</string>
+    <string name="reload_empty_cache">Empty cache &amp; hard reload</string>
     <string name="chrome_back">Back</string>
     <string name="chrome_menu">Menu</string>
     <string name="chrome_enter_url">Search with %1$s or enter address</string>

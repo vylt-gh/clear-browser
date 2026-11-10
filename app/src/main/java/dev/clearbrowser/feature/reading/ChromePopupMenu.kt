@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -54,11 +55,28 @@ import dev.clearbrowser.R
 import dev.clearbrowser.core.data.ChromeTheme
 
 /**
+ * The bubble's arrow.
+ *
+ * Shared between the shape that draws it and the code that positions the
+ * bubble, because the arrow is what says which control the menu belongs to:
+ * if the two disagreed about its width, the tip would not land on the button.
+ */
+internal val BUBBLE_ARROW_WIDTH: Dp = 16.dp
+
+/**
+ * How far the arrow sits from the bubble's right edge.
+ *
+ * Also shared: the shape draws the arrow here, and the positioning works out
+ * where the tip ends up from the same number.
+ */
+internal val BUBBLE_ARROW_OFFSET_FROM_RIGHT: Dp = 16.dp
+
+/**
  * Speech-bubble shape with a triangular arrow/tail on the bottom edge pointing down.
  */
 class BubbleShape(
     private val cornerRadius: Dp = 16.dp,
-    private val arrowWidth: Dp = 16.dp,
+    private val arrowWidth: Dp = BUBBLE_ARROW_WIDTH,
     private val arrowHeight: Dp = 10.dp,
     private val arrowOffsetFromRight: Dp = 16.dp,
 ) : Shape {
@@ -155,12 +173,131 @@ fun ChromePopupMenu(
 ) {
     if (!visible) return
 
+    PopupSurface(chromeTheme = chromeTheme, modifier = modifier) {
+        PopupMenuItem(
+            icon = Icons.Rounded.Bookmarks,
+            label = stringResource(R.string.menu_bookmarks),
+            onClick = {
+                onDismiss()
+                onBookmarks()
+            },
+            trailing = if (canBookmark) {
+                {
+                    IconButton(
+                        onClick = onToggleBookmark,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isBookmarked) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                }
+            } else null,
+        )
+        PopupMenuItem(
+            icon = Icons.Rounded.History,
+            label = stringResource(R.string.menu_history),
+            onClick = {
+                onDismiss()
+                onHistory()
+            },
+        )
+        PopupMenuItem(
+            icon = Icons.Rounded.Download,
+            label = stringResource(R.string.menu_downloads),
+            onClick = {
+                onDismiss()
+                onDownloads()
+            },
+        )
+        PopupMenuItem(
+            icon = Icons.Rounded.Extension,
+            label = stringResource(R.string.menu_extensions),
+            onClick = {
+                onDismiss()
+                onExtensions()
+            },
+        )
+        PopupMenuItem(
+            icon = Icons.Rounded.Search,
+            label = stringResource(R.string.menu_find_in_page),
+            onClick = {
+                onDismiss()
+                onFindInPage()
+            },
+        )
+        if (canShare) {
+            PopupMenuItem(
+                icon = Icons.AutoMirrored.Rounded.AddToHomeScreen,
+                label = stringResource(R.string.menu_add_to_homescreen),
+                onClick = {
+                    onDismiss()
+                    onAddToHomeScreen()
+                },
+            )
+            PopupMenuItem(
+                icon = Icons.Rounded.Share,
+                label = stringResource(R.string.menu_share),
+                onClick = {
+                    onDismiss()
+                    onShare()
+                },
+            )
+            PopupMenuItem(
+                icon = Icons.Rounded.ContentCopy,
+                label = stringResource(R.string.menu_copy_link),
+                onClick = {
+                    onDismiss()
+                    onCopyLink()
+                },
+            )
+        }
+        PopupMenuItem(
+            icon = Icons.Rounded.ExpandMore,
+            label = stringResource(R.string.menu_hide_chrome),
+            onClick = {
+                onDismiss()
+                onHideChrome()
+            },
+        )
+        PopupMenuItem(
+            icon = Icons.Rounded.Settings,
+            label = stringResource(R.string.menu_settings),
+            onClick = {
+                onDismiss()
+                onSettings()
+            },
+        )
+    }
+}
+
+/**
+ * The bubble every chrome popup is drawn in.
+ *
+ * One shape, one elevation and one border for all of them, because they are
+ * the same object: a small floating menu anchored to a control in the bar.
+ * A popup that looked different would read as a different kind of thing, and
+ * the user would have to learn the difference.
+ */
+@Composable
+internal fun PopupSurface(
+    chromeTheme: ChromeTheme,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val shape = when (chromeTheme) {
         ChromeTheme.CLEAR -> BubbleShape(
             cornerRadius = 16.dp,
-            arrowWidth = 16.dp,
+            arrowWidth = BUBBLE_ARROW_WIDTH,
             arrowHeight = 10.dp,
-            arrowOffsetFromRight = 16.dp,
+            arrowOffsetFromRight = BUBBLE_ARROW_OFFSET_FROM_RIGHT,
         )
         ChromeTheme.ACRYLIC, ChromeTheme.MATERIAL -> RoundedCornerShape(16.dp)
     }
@@ -206,114 +343,13 @@ fun ChromePopupMenu(
                     end = 6.dp,
                 ),
             verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            PopupMenuItem(
-                icon = Icons.Rounded.Bookmarks,
-                label = stringResource(R.string.menu_bookmarks),
-                onClick = {
-                    onDismiss()
-                    onBookmarks()
-                },
-                trailing = if (canBookmark) {
-                    {
-                        IconButton(
-                            onClick = onToggleBookmark,
-                            modifier = Modifier.size(32.dp),
-                        ) {
-                            Icon(
-                                imageVector = if (isBookmarked) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = if (isBookmarked) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            )
-                        }
-                    }
-                } else null,
-            )
-            PopupMenuItem(
-                icon = Icons.Rounded.History,
-                label = stringResource(R.string.menu_history),
-                onClick = {
-                    onDismiss()
-                    onHistory()
-                },
-            )
-            PopupMenuItem(
-                icon = Icons.Rounded.Download,
-                label = stringResource(R.string.menu_downloads),
-                onClick = {
-                    onDismiss()
-                    onDownloads()
-                },
-            )
-            PopupMenuItem(
-                icon = Icons.Rounded.Extension,
-                label = stringResource(R.string.menu_extensions),
-                onClick = {
-                    onDismiss()
-                    onExtensions()
-                },
-            )
-            PopupMenuItem(
-                icon = Icons.Rounded.Search,
-                label = stringResource(R.string.menu_find_in_page),
-                onClick = {
-                    onDismiss()
-                    onFindInPage()
-                },
-            )
-            if (canShare) {
-                PopupMenuItem(
-                    icon = Icons.AutoMirrored.Rounded.AddToHomeScreen,
-                    label = stringResource(R.string.menu_add_to_homescreen),
-                    onClick = {
-                        onDismiss()
-                        onAddToHomeScreen()
-                    },
-                )
-                PopupMenuItem(
-                    icon = Icons.Rounded.Share,
-                    label = stringResource(R.string.menu_share),
-                    onClick = {
-                        onDismiss()
-                        onShare()
-                    },
-                )
-                PopupMenuItem(
-                    icon = Icons.Rounded.ContentCopy,
-                    label = stringResource(R.string.menu_copy_link),
-                    onClick = {
-                        onDismiss()
-                        onCopyLink()
-                    },
-                )
-            }
-            PopupMenuItem(
-                icon = Icons.Rounded.ExpandMore,
-                label = stringResource(R.string.menu_hide_chrome),
-                onClick = {
-                    onDismiss()
-                    onHideChrome()
-                },
-            )
-            PopupMenuItem(
-                icon = Icons.Rounded.Settings,
-                label = stringResource(R.string.menu_settings),
-                onClick = {
-                    onDismiss()
-                    onSettings()
-                },
-            )
-        }
+            content = content,
+        )
     }
 }
 
 @Composable
-private fun PopupMenuItem(
+internal fun PopupMenuItem(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,

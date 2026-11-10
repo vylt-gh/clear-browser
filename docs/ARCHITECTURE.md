@@ -19,6 +19,7 @@ flowchart TD
         BC[BrowserChrome - Unified Morphing Surface]
         FIPB[FindInPageBar - In-Page Search]
         CPM[ChromePopupMenu - Anchored Speech Bubble]
+        RPM[ReloadPopup - Hold-to-Reload Menu]
         SS[SettingsSheet - Full Browser Configuration]
         ES[ExtensionsSheet - uBlock Origin MV2]
         TS[TabsSheet - Local Favicons & Badges]
@@ -52,6 +53,7 @@ flowchart TD
     BC --> RVM
     FIPB --> RVM
     CPM --> RVM
+    RPM --> RVM
     SS --> RVM
     ES --> RVM
     TS --> RVM
@@ -85,12 +87,18 @@ Unlike traditional browsers that maintain concurrent engine compositors for back
 - **Canopy Pull-to-Refresh**: Overscrolling downward reveals an expanding top canopy smoothly color-matched to the page's top bar color with rubber-band damping physics and a spring refresh indicator.
 - **Color Continuity**: During navigations and reloads, the previous top bar color is preserved until the incoming page's color is sampled, preventing jarring flashes of black or white.
 
-### 4. Zero-Telemetry Local Favicon Engine
+### 4. The New Tab Page, and What the Engine Keeps to Itself
+- The browser's start page is `about:newtab`: the browser's own name for the page it shows when there is nothing to open. It is drawn by the app (`StartPage`), never loaded into the engine, and never written to history.
+- `about:blank` stays the engine's own empty document. The engine reports it, the ViewModel translates it into `about:newtab` before anything records it, and a session written by an older build is recognised and migrated on restore.
+- **The chrome never frosts itself with the blank document.** `ChromeBackdropSampler` reads the engine's surface, which holds a white blank document when there is no page, so the engine refuses to sample it and the ViewModel drops any sample that arrives while the new tab page is up. The chrome then uses the theme's own frosted colours over the new tab page's surface.
+- **The engine's background matches the app from the first frame.** The neutral surface behind the page is resolved from the app theme and the system scheme, and the scheme is read from the Activity before the engine is built rather than from the composition a frame later.
+
+### 5. Zero-Telemetry Local Favicon Engine
 - Favicons are fetched directly from `https://${host}/favicon.ico` without third-party proxy resolvers or remote lookups (preventing external tracking leaks).
 - **Pure Kotlin Decoder (`FaviconDecoder` & `IcoParser`)**: Decodes standard PNG/WEBP/JPEG and multi-entry Windows `.ico` containers (supporting 1-bit, 4-bit, 8-bit, 24-bit, and 32-bit DIB bitmaps with alpha masks) with zero external image dependencies.
 - **Two-Tier Cache**: In-memory `LruCache` (60 items) for instant tab switcher rendering, backed by persistent disk caching (`cacheDir/favicons/`). Private browsing tabs are strictly isolated from disk cache.
 
-### 5. Atomic Disk Storage & Interoperability
+### 6. Atomic Disk Storage & Interoperability
 - Thread-safe, non-blocking disk persistence using temporary files and atomic rename operations (`AtomicJsonFile.kt`), preventing state corruption across unexpected process termination.
 - **Bookmark Interoperability**: `BookmarkCodec` supports importing and exporting standard Netscape Bookmark HTML format (`<!DOCTYPE NETSCAPE-Bookmark-file-1>`), compatible with Chrome, Firefox, Brave, Safari, and desktop browsers.
 
@@ -130,7 +138,7 @@ clear-browser/
 │   │   │   │       ├── onboarding/            # 4-step first-run walkthrough & live preview
 │   │   │   │       └── reading/               # Compose screens, sheets, chrome & ViewModel
 │   │   │   └── res/                           # Multi-density drawables, strings, theme XMLs
-│   │   └── test/java/dev/clearbrowser/        # 128 pure Kotlin unit tests
+│   │   └── test/java/dev/clearbrowser/        # 150 pure Kotlin unit tests
 │   └── build.gradle.kts
 ├── docs/
 │   ├── ARCHITECTURE.md                        # Technical architecture & internals (this file)

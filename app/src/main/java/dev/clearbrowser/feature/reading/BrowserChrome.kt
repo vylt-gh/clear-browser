@@ -156,6 +156,10 @@ fun ChromeSurface(
     onBoundsChanged: (android.graphics.RectF?) -> Unit,
     onQueryChange: (String) -> Unit = {},
     onDismissMenuPopup: () -> Unit = {},
+    onToggleReloadPopup: () -> Unit = {},
+    onDismissReloadPopup: () -> Unit = {},
+    onHardReload: () -> Unit = {},
+    onEmptyCacheAndReload: () -> Unit = {},
     onBookmarks: () -> Unit = {},
     onHistory: () -> Unit = {},
     onDownloads: () -> Unit = {},
@@ -425,6 +429,10 @@ fun ChromeSurface(
                         onNavigate = onNavigate,
                         onCollapseOmnibox = onCollapseOmnibox,
                         onDismissMenuPopup = onDismissMenuPopup,
+                        onToggleReloadPopup = onToggleReloadPopup,
+                        onDismissReloadPopup = onDismissReloadPopup,
+                        onHardReload = onHardReload,
+                        onEmptyCacheAndReload = onEmptyCacheAndReload,
                         onBookmarks = onBookmarks,
                         onHistory = onHistory,
                         onDownloads = onDownloads,
@@ -495,6 +503,10 @@ private fun CompactBar(
     onNavigate: (String) -> Unit,
     onCollapseOmnibox: () -> Unit,
     onDismissMenuPopup: () -> Unit = {},
+    onToggleReloadPopup: () -> Unit = {},
+    onDismissReloadPopup: () -> Unit = {},
+    onHardReload: () -> Unit = {},
+    onEmptyCacheAndReload: () -> Unit = {},
     onBookmarks: () -> Unit = {},
     onHistory: () -> Unit = {},
     onDownloads: () -> Unit = {},
@@ -630,17 +642,58 @@ private fun CompactBar(
                     )
                 }
 
-                IconButton(
-                    onClick = { if (state.isLoading) onStop() else onReload() },
+                // The reload button, and the menu that holding it opens.
+                //
+                // A tap still reloads, because that is what the button is for
+                // and a browser that made the user hold to reload would be
+                // unusable. The hold is for the two things reload is not:
+                // fetching the page past the cache, and throwing the cache
+                // away first.
+                //
+                // The shape is the menu button's, deliberately: the same slot,
+                // the same control inside it, so the two icons sit on the
+                // same line and take the same kind of touch. `IconButton`
+                // cannot be used here because it has no long press, and a
+                // second gesture handler on top of its own is not something to
+                // rely on.
+                Box(
                     modifier = Modifier.size(38.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = if (state.isLoading) Icons.Rounded.Close else Icons.Rounded.Refresh,
-                        contentDescription = stringResource(
-                            if (state.isLoading) R.string.chrome_reload_stop else R.string.chrome_reload,
-                        ),
-                        modifier = Modifier.size(20.dp),
-                    )
+                    @OptIn(ExperimentalFoundationApi::class)
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .combinedClickable(
+                                onClick = { if (state.isLoading) onStop() else onReload() },
+                                onLongClick = {
+                                    // While the page is loading the button is a
+                                    // stop button, and there is nothing to
+                                    // reload yet.
+                                    if (state.isLoading) return@combinedClickable
+                                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                    onToggleReloadPopup()
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (state.isLoading) Icons.Rounded.Close else Icons.Rounded.Refresh,
+                            contentDescription = stringResource(
+                                if (state.isLoading) R.string.chrome_reload_stop else R.string.chrome_reload,
+                            ),
+                            modifier = Modifier.size(20.dp),
+                        )
+
+                        ReloadPopup(
+                            visible = state.reloadPopupVisible,
+                            onHardReload = onHardReload,
+                            onEmptyCacheAndReload = onEmptyCacheAndReload,
+                            onDismiss = onDismissReloadPopup,
+                            chromeTheme = chromeTheme,
+                        )
+                    }
                 }
 
                 Box(
