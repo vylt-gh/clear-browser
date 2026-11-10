@@ -44,6 +44,11 @@ Built with Kotlin and Jetpack Compose and powered by Mozilla GeckoView, Clear pr
 
 ---
 
+>[!CAUTION]
+>This project was fully vibe-coded (coded with AI), I do not know how to make an Android app. Development will generally burst ahead when my Antigravity quota resets, and pause for the few days that it's low. 
+
+---
+
 ## Why Clear?
 
 ### 🛡️ Built-in Desktop-Grade Adblocking
@@ -122,10 +127,6 @@ For developers interested in Clear Browser's engine lifecycle, Choreographer-syn
 👉 Read the [Technical Architecture Documentation](docs/ARCHITECTURE.md)
 
 ---
-
-## AI Disclosure
-
-This project was developed with the assistance of AI coding agents (Google DeepMind's Antigravity). Architecture, implementation, testing, and documentation were created and refined through interactive pair programming with AI.
 
 ---
 
