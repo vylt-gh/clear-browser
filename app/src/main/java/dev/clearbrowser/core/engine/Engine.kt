@@ -9,10 +9,9 @@ import android.view.Window
 /**
  * The seam between the browser's brain and whatever renders the web.
  *
- * P0 ships a single Chromium WebView implementation. GeckoView can be dropped in
- * as a second implementation without `feature:reading` changing, which is why
- * the interface is kept this small and this free of engine-specific types: no
- * `android.webkit.WebView` in any signature, no Gecko classes.
+ * Ships GeckoView as the rendering engine. The interface isolates engine-specific
+ * types from `feature:reading` so domain and UI logic remain independent of
+ * underlying Gecko classes.
  *
  * Note what is *not* here. A real browser eventually needs multiple windows,
  * extension hosts, and a sync process -- things GeckoView supports and WebView

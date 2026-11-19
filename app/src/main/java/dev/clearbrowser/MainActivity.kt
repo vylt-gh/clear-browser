@@ -273,6 +273,49 @@ class MainActivity : ComponentActivity() {
         if (viewModel == null) return
 
         when {
+            action == dev.clearbrowser.core.data.DownloadNotificationManager.ACTION_OPEN_DOWNLOAD -> {
+                val id = intent.getLongExtra(dev.clearbrowser.core.data.DownloadNotificationManager.EXTRA_DOWNLOAD_ID, -1L)
+                if (id != -1L) {
+                    val item = downloads.downloads.value.firstOrNull { it.id == id }
+                    if (item != null) {
+                        openDownload(item)
+                    } else {
+                        val uri = downloads.getUriForDownloadedFile(id)
+                        if (uri != null) {
+                            val mime = downloads.getMimeTypeForDownloadedFile(id) ?: "application/octet-stream"
+                            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, mime)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            runCatching { startActivity(Intent.createChooser(viewIntent, null)) }
+                        }
+                    }
+                }
+            }
+            intent.dataString != null -> {
+                viewModel.navigate(intent.dataString!!)
+            }
+            intent.hasExtra("url") -> {
+                intent.getStringExtra("url")?.let { viewModel.navigate(it) }
+            }
+            BuildConfig.DEBUG -> {
+                handleDebugAutomationCommand(command, action, intent, viewModel)
+            }
+        }
+    }
+
+    /**
+     * Automation and test harness commands for `adb shell am start ...`.
+     * Gated behind [BuildConfig.DEBUG] so arbitrary apps on the device cannot
+     * trigger commands (such as clearing user data) in production.
+     */
+    private fun handleDebugAutomationCommand(
+        command: String?,
+        action: String?,
+        intent: Intent,
+        viewModel: ReadingViewModel,
+    ) {
+        when {
             command == "find" || action == "dev.clearbrowser.ACTION_FIND" -> {
                 viewModel.openFindInPage()
                 val q = intent.getStringExtra("query")
@@ -324,25 +367,6 @@ class MainActivity : ComponentActivity() {
             }
             command == "tabs" || action == "dev.clearbrowser.ACTION_TABS" -> {
                 viewModel.openTabs()
-            }
-            action == dev.clearbrowser.core.data.DownloadNotificationManager.ACTION_OPEN_DOWNLOAD -> {
-                val id = intent.getLongExtra(dev.clearbrowser.core.data.DownloadNotificationManager.EXTRA_DOWNLOAD_ID, -1L)
-                if (id != -1L) {
-                    val item = downloads.downloads.value.firstOrNull { it.id == id }
-                    if (item != null) {
-                        openDownload(item)
-                    } else {
-                        val uri = downloads.getUriForDownloadedFile(id)
-                        if (uri != null) {
-                            val mime = downloads.getMimeTypeForDownloadedFile(id) ?: "application/octet-stream"
-                            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(uri, mime)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            runCatching { startActivity(Intent.createChooser(viewIntent, null)) }
-                        }
-                    }
-                }
             }
             command == "new_tab" || action == "dev.clearbrowser.ACTION_NEW_TAB" -> {
                 viewModel.newTab(intent.getStringExtra("url").orEmpty())
@@ -420,12 +444,6 @@ class MainActivity : ComponentActivity() {
             command == "m3_chrome" || command == "original_m3" || action == "dev.clearbrowser.ACTION_M3_CHROME" -> {
                 val enabled = intent.getBooleanExtra("enabled", true)
                 settings.setChromeTheme(if (enabled) dev.clearbrowser.core.data.ChromeTheme.MATERIAL else dev.clearbrowser.core.data.ChromeTheme.CLEAR)
-            }
-            intent.dataString != null -> {
-                viewModel.navigate(intent.dataString!!)
-            }
-            intent.hasExtra("url") -> {
-                intent.getStringExtra("url")?.let { viewModel.navigate(it) }
             }
         }
     }
@@ -613,6 +631,7 @@ class MainActivity : ComponentActivity() {
 
         ReadingScreen(
             state = state,
+            backdropBlur = viewModel.backdropBlur,
             bookmarks = bookmarkEntries,
             history = historyEntries,
             downloads = downloadEntries,

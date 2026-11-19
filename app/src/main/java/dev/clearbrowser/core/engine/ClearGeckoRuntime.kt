@@ -44,7 +44,24 @@ object ClearGeckoRuntime {
     private val _installedExtensions = MutableStateFlow<List<ExtensionInfo>>(emptyList())
     val installedExtensions: StateFlow<List<ExtensionInfo>> = _installedExtensions.asStateFlow()
 
-    private val registeredExtensions = mutableMapOf<String, WebExtension>()
+    private val registeredExtensions = java.util.concurrent.ConcurrentHashMap<String, WebExtension>()
+
+    interface ExtensionPromptDelegate {
+        fun onInstallPrompt(
+            extension: WebExtension,
+            permissions: Array<out String>,
+            origins: Array<out String>,
+        ): GeckoResult<WebExtension.PermissionPromptResponse>
+
+        fun onOptionalPrompt(
+            extension: WebExtension,
+            permissions: Array<out String>,
+            origins: Array<out String>,
+        ): GeckoResult<AllowOrDeny> = GeckoResult.fromValue(AllowOrDeny.DENY)
+    }
+
+    @Volatile
+    var extensionPromptDelegate: ExtensionPromptDelegate? = null
 
     fun getExtension(id: String): WebExtension? = registeredExtensions[id]
 
@@ -103,7 +120,7 @@ object ClearGeckoRuntime {
             val ver = org.mozilla.geckoview.BuildConfig.MOZILLA_VERSION
             val buildId = org.mozilla.geckoview.BuildConfig.MOZ_APP_BUILDID
             if (!buildId.isNullOrBlank()) "$ver ($buildId)" else ver
-        }.getOrDefault("144.0")
+        }.getOrDefault("159.0")
 
     fun revokePermissionFromHost(origin: String) {
         val host = runCatching { android.net.Uri.parse(origin).host }.getOrNull() ?: origin
@@ -164,7 +181,7 @@ object ClearGeckoRuntime {
 
     private fun createRuntime(context: Context): GeckoRuntime {
         val settings = GeckoRuntimeSettings.Builder()
-            .aboutConfigEnabled(true)
+            .aboutConfigEnabled(dev.clearbrowser.BuildConfig.DEBUG)
             .extensionsWebAPIEnabled(true)
             .loginAutofillEnabled(true)
             .contentBlocking(
@@ -189,11 +206,26 @@ object ClearGeckoRuntime {
                 data: Array<out String>,
             ): GeckoResult<WebExtension.PermissionPromptResponse>? {
                 Log.i(TAG, "Extension install requested: ${extension.id} (${extension.metaData.name})")
+                // Pre-approved bundled extensions
+                if (extension.id == UBLOCK_ID) {
+                    return GeckoResult.fromValue(
+                        WebExtension.PermissionPromptResponse(
+                            true, // isPermissionsGranted
+                            true, // isPrivateModeGranted
+                            false, // isTechnicalAndInteractionDataGranted
+                        ),
+                    )
+                }
+                val delegate = extensionPromptDelegate
+                if (delegate != null) {
+                    return delegate.onInstallPrompt(extension, permissions, origins)
+                }
+                Log.w(TAG, "Rejecting extension install for ${extension.id}: no prompt delegate to confirm permissions")
                 return GeckoResult.fromValue(
                     WebExtension.PermissionPromptResponse(
-                        true, // isPermissionsGranted
-                        true, // isPrivateModeGranted
-                        false, // isTechnicalAndInteractionDataGranted
+                        false,
+                        false,
+                        false,
                     ),
                 )
             }
@@ -204,6 +236,9 @@ object ClearGeckoRuntime {
                 origins: Array<out String>,
                 data: Array<out String>,
             ): GeckoResult<AllowOrDeny>? {
+                if (extension.id == UBLOCK_ID) {
+                    return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+                }
                 return GeckoResult.fromValue(AllowOrDeny.ALLOW)
             }
 
@@ -213,7 +248,14 @@ object ClearGeckoRuntime {
                 origins: Array<out String>,
                 data: Array<out String>,
             ): GeckoResult<AllowOrDeny>? {
-                return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+                if (extension.id == UBLOCK_ID) {
+                    return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+                }
+                val delegate = extensionPromptDelegate
+                if (delegate != null) {
+                    return delegate.onOptionalPrompt(extension, permissions, origins)
+                }
+                return GeckoResult.fromValue(AllowOrDeny.DENY)
             }
         }
 

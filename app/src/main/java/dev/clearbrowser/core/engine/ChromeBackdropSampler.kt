@@ -44,11 +44,14 @@ class ChromeBackdropSampler(
     private val buf2 = IntArray(sampleWidth * sampleHeight)
     private val temporalBuf = IntArray(sampleWidth * sampleHeight)
 
+    private var cachedSurfaceView: java.lang.ref.WeakReference<SurfaceView>? = null
+
     fun reset() {
         isSampling = false
         hasHistory = false
         hasPendingSample = false
         lastSampleTime = 0L
+        cachedSurfaceView = null
     }
 
     fun sample(root: View?, force: Boolean = false) {
@@ -70,7 +73,12 @@ class ChromeBackdropSampler(
 
         if (isSampling) return
 
-        val surfaceView = findSurfaceView(root) ?: return
+        val cached = cachedSurfaceView?.get()
+        val surfaceView = if (cached != null && cached.isAttachedToWindow) {
+            cached
+        } else {
+            findSurfaceView(root)?.also { cachedSurfaceView = java.lang.ref.WeakReference(it) } ?: return
+        }
         val surface = surfaceView.holder.surface
         if (surface == null || !surface.isValid) return
 

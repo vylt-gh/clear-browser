@@ -262,7 +262,7 @@ fun SettingsSheet(
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
             AboutSection(
-                appVersion = "0.10.0",
+                appVersion = dev.clearbrowser.BuildConfig.VERSION_NAME,
                 engineVersion = dev.clearbrowser.core.engine.ClearGeckoRuntime.geckoViewVersion,
             )
         }

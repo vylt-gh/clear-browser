@@ -25,7 +25,6 @@ import dev.clearbrowser.core.engine.Engine
 import dev.clearbrowser.core.engine.EngineListener
 import dev.clearbrowser.core.engine.GeckoViewEngine
 import dev.clearbrowser.core.engine.LoadState
-import dev.clearbrowser.core.engine.WebViewEngine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,9 +76,6 @@ data class ReadingUiState(
     val topBarColor: Int? = null,
     /** Whether the webpage top background is light, for status bar icon contrast. */
     val isTopBarLight: Boolean = true,
-    /** Blurred micro-buffer backdrop sampled from the page region directly behind the chrome. */
-    val backdropBlur: androidx.compose.ui.graphics.ImageBitmap? = null,
-    val backdropBlurVersion: Long = 0L,
     /** Whether an HTML5 element or video is currently in fullscreen mode. */
     val isFullscreen: Boolean = false,
     /** Whether the Find in Page bar is visible. */
@@ -287,6 +283,14 @@ class ReadingViewModel(
      */
     private val progressFlow = MutableStateFlow(0)
     val progress: StateFlow<Int> = progressFlow.asStateFlow()
+
+    /**
+     * Blurred micro-buffer backdrop sampled from the page region directly behind the chrome.
+     * Kept out of [ReadingUiState] to avoid triggering full-screen recompositions at 35fps
+     * during active scroll.
+     */
+    private val backdropBlurFlow = MutableStateFlow<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    val backdropBlur: StateFlow<androidx.compose.ui.graphics.ImageBitmap?> = backdropBlurFlow.asStateFlow()
 
     /**
      * The system colour scheme, as the Activity reports it.
@@ -853,11 +857,8 @@ class ReadingViewModel(
             isTopBarLight = !isDarkTheme(),
             chromeMode = ChromeMode.SUMMONED,
             tabs = strip.summaries(),
-            // There is no page behind the chrome to blur. Leaving the last
-            // page's blur here would frost the chrome with a page the user
-            // cannot see.
-            backdropBlur = null,
         )
+        backdropBlurFlow.value = null
     }
 
     fun goForward(): Boolean {
@@ -1373,8 +1374,14 @@ class ReadingViewModel(
          * internal document, not a page of the browser's.
          */
         override fun onUrlChanged(url: String) {
-            val page = if (url == ABOUT_BLANK) ABOUT_NEWTAB else url
             val existingUrl = strip.tabs.find { it.id == tabId }?.url.orEmpty()
+            // Gecko sessions emit about:blank on cold start before loading the real URL.
+            // If the tab already has a non-start target page (e.g. cold start or tab switch),
+            // ignore the transient blank document so we don't flash about:newtab.
+            if ((url == ABOUT_BLANK || url.isBlank()) && !isStartPageUrl(existingUrl)) {
+                return
+            }
+            val page = if (url == ABOUT_BLANK) ABOUT_NEWTAB else url
             if (lastCommittedUrl.isBlank() && existingUrl.isNotBlank() && existingUrl != page) {
                 lastCommittedUrl = existingUrl
             }
@@ -1393,6 +1400,10 @@ class ReadingViewModel(
         }
 
         override fun onTitleChanged(title: String) {
+            val existingTitle = strip.tabs.find { it.id == tabId }?.title.orEmpty()
+            if (title.isBlank() && existingTitle.isNotBlank()) {
+                return
+            }
             strip.update(tabId) { it.copy(title = title) }
             publishTabs()
             // The title is the last half of the visit: once it lands, the entry
@@ -1428,6 +1439,10 @@ class ReadingViewModel(
         }
 
         override fun onPageCommitted(url: String) {
+            val existingUrl = strip.tabs.find { it.id == tabId }?.url.orEmpty()
+            if ((url == ABOUT_BLANK || url.isBlank()) && !isStartPageUrl(existingUrl)) {
+                return
+            }
             lastCommittedUrl = if (url == ABOUT_BLANK) ABOUT_NEWTAB else url
             if (!isActive) return
             // Deferred: the view may not be laid out at its final size yet.
@@ -1525,10 +1540,7 @@ class ReadingViewModel(
         override fun onBackdropBlurSampled(bitmap: androidx.compose.ui.graphics.ImageBitmap) {
             if (!isActive) return
             if (_state.value.isStartPage) return
-            _state.value = _state.value.copy(
-                backdropBlur = bitmap,
-                backdropBlurVersion = _state.value.backdropBlurVersion + 1L,
-            )
+            backdropBlurFlow.value = bitmap
         }
 
         override fun onFullScreenChanged(fullScreen: Boolean) {
@@ -1680,10 +1692,8 @@ class ReadingViewModel(
         if (isStartPageUrl(url)) {
             _state.value = _state.value.copy(
                 topBarColor = null,
-                // The new tab page is drawn by the browser, not by the engine,
-                // so there is no page colour to sample and no page to blur.
-                backdropBlur = null,
             )
+            backdropBlurFlow.value = null
         }
     }
 
@@ -1743,14 +1753,15 @@ class ReadingViewModel(
             tabs = strip.summaries(),
             activeTabId = tab.id,
             topBarColor = if (isBlank) null else _state.value.topBarColor,
-            backdropBlur = if (isBlank) null else _state.value.backdropBlur,
             isFullscreen = false,
             findInPageVisible = false,
             // The reload menu belongs to the button that opened it, and that
             // button belongs to the tab that is on screen.
             reloadPopupVisible = false,
         )
-        if (!isBlank) {
+        if (isBlank) {
+            backdropBlurFlow.value = null
+        } else {
             engine?.sampleChromeBackdrop()
         }
         refreshBookmarked()

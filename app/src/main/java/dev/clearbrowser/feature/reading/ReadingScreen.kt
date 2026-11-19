@@ -64,6 +64,8 @@ import dev.clearbrowser.core.engine.WebContainer
 import dev.clearbrowser.core.theme.ClearBrowserTheme
 import dev.clearbrowser.core.theme.chromeFadeSpec
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -78,6 +80,7 @@ import kotlin.math.roundToInt
 @Composable
 fun ReadingScreen(
     state: ReadingUiState,
+    backdropBlur: StateFlow<androidx.compose.ui.graphics.ImageBitmap?> = MutableStateFlow(null),
     bookmarks: List<dev.clearbrowser.core.data.Bookmark>,
     history: List<dev.clearbrowser.core.data.HistoryEntry>,
     downloads: List<dev.clearbrowser.core.data.DownloadItem> = emptyList(),
@@ -263,10 +266,6 @@ fun ReadingScreen(
         pullOffsetAnim.snapTo(0f)
     }
 
-    val currentPullOffset = pullOffsetAnim.value
-    val pullOffsetDp = with(density) { currentPullOffset.toDp() }
-    val canopyHeight = statusBarTop + pullOffsetDp
-
     val activeDownloads = remember(downloads) {
         downloads.filter {
             it.status == android.app.DownloadManager.STATUS_RUNNING ||
@@ -298,7 +297,7 @@ fun ReadingScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = if (state.isFullscreen) 0.dp else statusBarTop)
-                    .offset { IntOffset(0, currentPullOffset.roundToInt()) }
+                    .offset { IntOffset(0, pullOffsetAnim.value.roundToInt()) }
                     .testTag("web-content"),
                 update = { holder ->
                     attachEngine(holder)
@@ -310,88 +309,22 @@ fun ReadingScreen(
             )
 
             // Top status bar strip & expanding pull-to-refresh canopy:
-            // Fills the status bar area with the website's sampled top bar color, and expands
-            // downward during a pull gesture with the tactile contrast-matched reload indicator.
+            // Isolated in its own composable so pull animation frames do not trigger root screen recomposition.
             if (!state.isFullscreen) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(canopyHeight)
-                        .background(
-                            if (!state.isStartPage && state.topBarColor != null) {
-                                Color(state.topBarColor)
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            }
-                        )
-                        .align(Alignment.TopCenter),
-                ) {
-                    if (currentPullOffset > 4f) {
-                        val contentColor = if (!state.isStartPage && state.topBarColor != null) {
-                            if (state.isTopBarLight) Color(0xFF1E1E1E) else Color(0xFFF2F2F2)
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(pullOffsetDp)
-                                .align(Alignment.BottomCenter),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (isRefreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .graphicsLayer {
-                                            alpha = (currentPullOffset / restingLoadingHeightPx).coerceIn(0f, 1f)
-                                        },
-                                    color = contentColor,
-                                    strokeWidth = 2.5.dp,
-                                )
-                            } else {
-                                val progress = (currentPullOffset / triggerThresholdPx).coerceIn(0f, 1f)
-                                val rotation = progress * 180f
-                                val scale = 0.6f + (progress * 0.4f)
-                                val alpha = (progress * 1.5f).coerceIn(0.2f, 1f)
-
-                                Icon(
-                                    imageVector = Icons.Rounded.Refresh,
-                                    contentDescription = stringResource(R.string.chrome_reload),
-                                    tint = contentColor.copy(alpha = alpha),
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .graphicsLayer {
-                                            rotationZ = rotation
-                                            scaleX = scale
-                                            scaleY = scale
-                                        },
-                                )
-                            }
-                        }
-                    }
-
-                    if (state.settings.canopyDownloads && activeDownloads.isNotEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .align(Alignment.BottomCenter)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = onOpenDownloads,
-                                ),
-                        ) {
-                            activeDownloads.forEach { download ->
-                                CanopyDownloadBar(
-                                    download = download,
-                                    isTopBarLight = state.isTopBarLight,
-                                )
-                            }
-                        }
-                    }
-                }
+                PullToRefreshCanopy(
+                    pullOffsetAnim = pullOffsetAnim,
+                    statusBarTop = statusBarTop,
+                    isStartPage = state.isStartPage,
+                    topBarColor = state.topBarColor,
+                    isTopBarLight = state.isTopBarLight,
+                    isRefreshing = isRefreshing,
+                    restingLoadingHeightPx = restingLoadingHeightPx,
+                    triggerThresholdPx = triggerThresholdPx,
+                    canopyDownloads = state.settings.canopyDownloads,
+                    activeDownloads = activeDownloads,
+                    onOpenDownloads = onOpenDownloads,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
             }
 
             // No scrim over the top of the page any more. The engine insets its
@@ -433,6 +366,7 @@ fun ReadingScreen(
             if (!state.isFullscreen) {
                 ChromeSurface(
                     state = state,
+                    backdropBlur = backdropBlur,
                     onBack = onBack,
                     onReload = onReload,
                     onStop = onStop,
@@ -663,6 +597,106 @@ private fun CanopyDownloadBar(
                 color = indicatorColor,
                 trackColor = trackColor,
             )
+        }
+    }
+}
+
+@Composable
+private fun PullToRefreshCanopy(
+    pullOffsetAnim: Animatable<Float, *>,
+    statusBarTop: androidx.compose.ui.unit.Dp,
+    isStartPage: Boolean,
+    topBarColor: Int?,
+    isTopBarLight: Boolean,
+    isRefreshing: Boolean,
+    restingLoadingHeightPx: Float,
+    triggerThresholdPx: Float,
+    canopyDownloads: Boolean,
+    activeDownloads: List<DownloadItem>,
+    onOpenDownloads: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val currentPullOffset = pullOffsetAnim.value
+    val density = LocalDensity.current
+    val pullOffsetDp = with(density) { currentPullOffset.toDp() }
+    val canopyHeight = statusBarTop + pullOffsetDp
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(canopyHeight)
+            .background(
+                if (!isStartPage && topBarColor != null) {
+                    Color(topBarColor)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
+            ),
+    ) {
+        if (currentPullOffset > 4f) {
+            val contentColor = if (!isStartPage && topBarColor != null) {
+                if (isTopBarLight) Color(0xFF1E1E1E) else Color(0xFFF2F2F2)
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(pullOffsetDp)
+                    .align(Alignment.BottomCenter),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isRefreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .graphicsLayer {
+                                alpha = (currentPullOffset / restingLoadingHeightPx).coerceIn(0f, 1f)
+                            },
+                        color = contentColor,
+                        strokeWidth = 2.5.dp,
+                    )
+                } else {
+                    val progress = (currentPullOffset / triggerThresholdPx).coerceIn(0f, 1f)
+                    val rotation = progress * 180f
+                    val scale = 0.6f + (progress * 0.4f)
+                    val alpha = (progress * 1.5f).coerceIn(0.2f, 1f)
+
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = stringResource(R.string.chrome_reload),
+                        tint = contentColor.copy(alpha = alpha),
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer {
+                                rotationZ = rotation
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                    )
+                }
+            }
+        }
+
+        if (canopyDownloads && activeDownloads.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onOpenDownloads,
+                    ),
+            ) {
+                activeDownloads.forEach { download ->
+                    CanopyDownloadBar(
+                        download = download,
+                        isTopBarLight = isTopBarLight,
+                    )
+                }
+            }
         }
     }
 }

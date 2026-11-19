@@ -108,8 +108,8 @@ Unlike traditional browsers that maintain concurrent engine compositors for back
 
 1. **Decoupled Progress State**:
    High-frequency page loading progress (emitting up to 100Hz) emits to an independent `StateFlow<Int>`, completely isolating rapid progress ticks from the main reading screen state and eliminating full-screen recompositions.
-2. **Choreographer-Synchronized Scroll Detection**:
-   Scroll intent detection synchronizes with Android's `Choreographer` display frame pulses rather than fixed-timer polling. This dropped janky frames from 23% to 1.75% and reduced p95 frame rendering latency to 11ms.
+2. **Thresholded Scroll Intent Detection**:
+   Chrome visibility during scrolling is governed by `ScrollIntentDetector`, using accumulated delta hysteresis and top-of-page bounds checking to prevent chrome flicker during momentum flings and nested scroll events.
 3. **120Hz Smooth Scrolling for History & Bookmarks**:
    Zero-allocation relative time formatting via integer math, precomputed display models, and fixed-height rows, eliminating ICU/JNI bottlenecks during fast flings.
 4. **Tested Pure Domain Logic**:

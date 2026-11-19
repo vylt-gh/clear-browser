@@ -173,8 +173,9 @@ private fun TabRow(
             contentAlignment = Alignment.Center,
         ) {
             if (favicon != null) {
+                val imageBitmap = androidx.compose.runtime.remember(favicon) { favicon.asImageBitmap() }
                 Image(
-                    bitmap = favicon.asImageBitmap(),
+                    bitmap = imageBitmap,
                     contentDescription = null,
                     modifier = Modifier
                         .size(24.dp)

@@ -87,6 +87,9 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import dev.clearbrowser.R
 import dev.clearbrowser.core.data.AppTheme
 import dev.clearbrowser.core.data.BrowserSettings
@@ -140,6 +143,7 @@ internal fun resolveIsDark(appTheme: AppTheme, systemDark: Boolean): Boolean = w
 @Composable
 fun ChromeSurface(
     state: ReadingUiState,
+    backdropBlur: StateFlow<androidx.compose.ui.graphics.ImageBitmap?> = MutableStateFlow(null),
     onBack: () -> Unit,
     onReload: () -> Unit,
     onStop: () -> Unit,
@@ -246,11 +250,12 @@ fun ChromeSurface(
 
         val isDark = resolveIsDark(state.settings.appTheme, isSystemInDarkTheme())
         val chromeTheme = state.settings.chromeTheme
+        val blur by backdropBlur.collectAsStateWithLifecycle()
         val hideOffsetY = if (!handleExisted) lerpDp(HANDLE_SIZE + HANDLE_MARGIN * 3, 0.dp, progress) else 0.dp
         val expandedWidthPx = with(density) { expandedWidth.toPx() }
         val currentOffsetPx = with(density) { currentOffset.toPx() }
         val hideOffsetYPx = with(density) { hideOffsetY.toPx() }
-        val hasBackdrop = state.backdropBlur != null && (chromeTheme == ChromeTheme.CLEAR || chromeTheme == ChromeTheme.ACRYLIC)
+        val hasBackdrop = blur != null && (chromeTheme == ChromeTheme.CLEAR || chromeTheme == ChromeTheme.ACRYLIC)
         val (frostedBackground, frostedBorder) = rememberFrostedGlassBrushes(isDark, hasBackdrop)
 
         val colorScheme = MaterialTheme.colorScheme
@@ -279,6 +284,8 @@ fun ChromeSurface(
                 )
             )
         }
+
+        val lastDispatchedBounds = remember { android.graphics.RectF() }
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -328,10 +335,10 @@ fun ChromeSurface(
                         )
                         .clip(CircleShape)
                         .drawBehind {
-                            val blur = state.backdropBlur
-                            if (blur != null) {
+                            val b = blur
+                            if (b != null) {
                                 drawImage(
-                                    image = blur,
+                                    image = b,
                                     dstOffset = IntOffset(-currentOffsetPx.roundToInt(), -hideOffsetYPx.roundToInt()),
                                     dstSize = IntSize(expandedWidthPx.roundToInt(), size.height.roundToInt()),
                                     filterQuality = FilterQuality.Low,
@@ -358,10 +365,10 @@ fun ChromeSurface(
                         )
                         .clip(CircleShape)
                         .drawBehind {
-                            val blur = state.backdropBlur
-                            if (blur != null) {
+                            val b = blur
+                            if (b != null) {
                                 drawImage(
-                                    image = blur,
+                                    image = b,
                                     dstOffset = IntOffset(-currentOffsetPx.roundToInt(), -hideOffsetYPx.roundToInt()),
                                     dstSize = IntSize(expandedWidthPx.roundToInt(), size.height.roundToInt()),
                                     filterQuality = FilterQuality.Low,
@@ -396,8 +403,15 @@ fun ChromeSurface(
                 modifier = chromeBarModifier
                     .onGloballyPositioned { coords ->
                         val window = coords.boundsInWindow()
-                        bounds.set(window.left, window.top, window.right, window.bottom)
-                        onBoundsChanged(bounds)
+                        if (window.left != lastDispatchedBounds.left ||
+                            window.top != lastDispatchedBounds.top ||
+                            window.right != lastDispatchedBounds.right ||
+                            window.bottom != lastDispatchedBounds.bottom
+                        ) {
+                            lastDispatchedBounds.set(window.left, window.top, window.right, window.bottom)
+                            bounds.set(window.left, window.top, window.right, window.bottom)
+                            onBoundsChanged(bounds)
+                        }
                     },
                 horizontalArrangement = when {
                     !handleExisted -> Arrangement.Center
@@ -1011,7 +1025,6 @@ private fun SuggestionItem(
         )
 
         Spacer(modifier = Modifier.width(14.dp))
-
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center,
